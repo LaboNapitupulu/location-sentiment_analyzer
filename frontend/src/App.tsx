@@ -92,8 +92,6 @@ type StreamMessage = {
   place?: PlaceDetails
 }
 
-const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
-const API_BASE_URL = configuredApiBase?.replace(/\/+$/, '') ?? ''
 
 function isResultData(value: StreamMessage): value is StreamMessage & ResultData {
   return (
