@@ -1,0 +1,38 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local runtime and model caches
+.uv-cache/
+.uv-python/
+.cache/
+huggingface/
+.browser-profile/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Scraper diagnostics
+backend/reviews_feed.html
+backend/screenshot_*.png
+backend/debug/
+
+# Editors and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
