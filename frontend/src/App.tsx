@@ -365,6 +365,18 @@ function App() {
     })
   }
 
+  const clearResults = () => {
+    setResultData(null)
+    setSelectedPlace(null)
+    setInput('')
+    setProgress(0)
+    setElapsedSeconds(0)
+    setStatusText('')
+    setWarningText('')
+    setErrorMsg('')
+    setReviewProgress(null)
+  }
+
   return (
     <main className="min-h-screen bg-google-light dark:bg-google-darkBg text-gray-900 dark:text-google-darkText flex flex-col items-center pt-20 pb-20 font-sans transition-colors duration-200">
       <button
@@ -491,12 +503,20 @@ function App() {
 
       {resultData && !isLoading && (
         <section className="w-full max-w-6xl mt-16 px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Sentiment Analysis Results</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">
-              {resultData.meta.analyzed_count} reviews analyzed using {resultData.meta.model_id}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">Review source: Google Maps · Data is not retained after the session ends</p>
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-12">
+            <div className="text-center sm:text-left">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sentiment Analysis Results</h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
+                {resultData.meta.analyzed_count} reviews analyzed using {resultData.meta.model_id}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Review source: Google Maps · Data is not retained</p>
+            </div>
+            <button
+              onClick={clearResults}
+              className="mt-6 sm:mt-0 flex items-center px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium rounded-full transition-colors"
+            >
+              Clear Results
+            </button>
           </div>
 
           {resultData.anomalies.length > 0 && (
@@ -524,35 +544,37 @@ function App() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1 bg-white dark:bg-google-darkSurface p-6 rounded-xl shadow-sm border border-gray-100 dark:border-google-darkBorder flex flex-col items-center">
-              <h3 className="text-lg font-semibold mb-4 self-start">Sentiment Summary</h3>
-              <div className="w-full h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={chartData} cx="50%" cy="45%" innerRadius={55} outerRadius={82} paddingAngle={4} dataKey="value" label={({ percent = 0 }) => `${(percent * 100).toFixed(0)}%`}>
-                      {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgb(0 0 0 / 0.12)' }} />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
+          <div className="flex flex-col gap-10">
+            <div className="bg-white dark:bg-google-darkSurface p-8 sm:p-10 rounded-[2rem] shadow-sm border border-gray-100 dark:border-google-darkBorder flex flex-col lg:flex-row gap-10">
+              <div className="flex-1 flex flex-col items-center">
+                <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-gray-100">Sentiment Distribution</h3>
+                <div className="w-full h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={4} dataKey="value" label={({ percent = 0 }) => `${(percent * 100).toFixed(0)}%`}>
+                        {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 24px rgb(0 0 0 / 0.12)' }} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
-              <div className="w-full mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-                <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 flex items-center">
-                  <MessageSquare className="w-4 h-4 mr-2" /> Most frequent words
+              <div className="flex-1 lg:border-l border-t lg:border-t-0 border-gray-100 dark:border-gray-800 pt-8 lg:pt-0 lg:pl-10 flex flex-col justify-center">
+                <h4 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center">
+                  <MessageSquare className="w-5 h-5 mr-2" /> Most frequent words
                 </h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {resultData.keywords.map((keyword) => (
-                    <span key={keyword.text} className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full text-xs font-medium">
-                      {keyword.text} ({keyword.value})
+                    <span key={keyword.text} className="px-4 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium">
+                      {keyword.text} <span className="text-gray-400 dark:text-gray-500 ml-1">({keyword.value})</span>
                     </span>
                   ))}
                 </div>
 
                 {resultData.keyword_groups && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-10">
                     <KeywordGroup title="Praise" color="text-google-green" items={resultData.keyword_groups.positive} />
                     <KeywordGroup title="Complaints" color="text-google-red" items={resultData.keyword_groups.negative} />
                   </div>
@@ -560,9 +582,9 @@ function App() {
               </div>
             </div>
 
-            <div className="col-span-1 lg:col-span-2 space-y-6">
-              <ReviewCard title="Top Positive Reviews" color="text-google-green" icon={<ThumbsUp className="w-5 h-5 mr-2" />} reviews={topBottomReviews.top} />
-              <ReviewCard title="Top Complaints (Negative)" color="text-google-red" icon={<ThumbsDown className="w-5 h-5 mr-2" />} reviews={topBottomReviews.bottom} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <ReviewCard title="Top Positive Reviews" color="text-google-green" icon={<ThumbsUp className="w-6 h-6 mr-3" />} reviews={topBottomReviews.top} />
+              <ReviewCard title="Top Complaints (Negative)" color="text-google-red" icon={<ThumbsDown className="w-6 h-6 mr-3" />} reviews={topBottomReviews.bottom} />
             </div>
           </div>
         </section>
@@ -594,39 +616,39 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
     : ''
 
   return (
-    <article className="mt-4 overflow-hidden bg-white dark:bg-google-darkSurface border border-gray-200 dark:border-google-darkBorder rounded-2xl shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr]">
-        <div className="h-40 sm:h-full min-h-36 bg-gray-100 dark:bg-gray-800">
+    <article className="mt-6 overflow-hidden bg-white dark:bg-google-darkSurface border border-gray-200 dark:border-google-darkBorder rounded-[1.5rem] shadow-sm max-w-2xl w-full mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr]">
+        <div className="h-48 sm:h-full min-h-40 bg-gray-100 dark:bg-gray-800 relative">
           {showPhoto ? (
             <img
               src={place.photo_url ?? ''}
               alt={`Photo of ${place.display_name}`}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
               onError={() => setImageFailed(true)}
             />
           ) : hasCoordinates ? (
             <iframe
               src={mapPreviewUrl}
               title={`Map of ${place.display_name}`}
-              className="w-full h-full min-h-40 border-0"
+              className="absolute inset-0 w-full h-full border-0"
               loading="lazy"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-full h-full min-h-36 flex flex-col items-center justify-center text-gray-400">
-              <ImageOff className="w-7 h-7 mb-2" />
-              <span className="text-xs">Photo unavailable</span>
+            <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-gray-400">
+              <ImageOff className="w-8 h-8 mb-2 opacity-50" />
+              <span className="text-sm font-medium">Photo unavailable</span>
             </div>
           )}
         </div>
-        <div className="p-4 min-w-0 flex flex-col justify-center">
-          <div className="flex items-start justify-between gap-3">
+        <div className="p-6 min-w-0 flex flex-col justify-center">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
                 {place.display_name}
               </p>
               {place.primary_type && (
-                <p className="text-xs text-google-blue mt-0.5">{place.primary_type}</p>
+                <p className="text-sm font-medium text-google-blue mt-1 uppercase tracking-wide">{place.primary_type}</p>
               )}
             </div>
             {(place.map_uri || place.google_maps_uri) && (
@@ -634,18 +656,18 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
                 href={place.map_uri || place.google_maps_uri}
                 target="_blank"
                 rel="noreferrer"
-                className="text-gray-400 hover:text-google-blue shrink-0"
+                className="text-gray-400 hover:text-google-blue shrink-0 p-2 -mr-2 -mt-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                 aria-label={`Open place in ${place.map_provider}`}
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-5 h-5" />
               </a>
             )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 leading-relaxed">
             {place.formatted_address}
           </p>
           {showPhoto && place.photo_attributions.length > 0 && (
-            <p className="text-[10px] text-gray-400 mt-3">
+            <p className="text-xs text-gray-400 mt-4 border-t border-gray-100 dark:border-gray-800 pt-3">
               Photo by{' '}
               {place.photo_attributions.map((attribution, index) => (
                 <span key={`${attribution.display_name}-${index}`}>
@@ -655,12 +677,12 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
                       href={attribution.uri}
                       target="_blank"
                       rel="noreferrer"
-                      className="underline hover:text-google-blue"
+                      className="hover:text-google-blue font-medium transition-colors"
                     >
                       {attribution.display_name}
                     </a>
                   ) : (
-                    attribution.display_name
+                    <span className="font-medium">{attribution.display_name}</span>
                   )}
                   {attribution.license && (
                     <>
@@ -670,7 +692,7 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
                           href={attribution.license_uri}
                           target="_blank"
                           rel="noreferrer"
-                          className="underline hover:text-google-blue"
+                          className="hover:text-google-blue transition-colors"
                         >
                           {attribution.license}
                         </a>
@@ -684,7 +706,7 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
             </p>
           )}
           {place.data_attribution && (
-            <p className="text-[10px] text-gray-400 mt-2">{place.data_attribution}</p>
+            <p className="text-xs text-gray-400 mt-2">{place.data_attribution}</p>
           )}
         </div>
       </div>
@@ -695,8 +717,8 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
 function KeywordGroup({ title, color, items }: { title: string; color: string; items: Keyword[] }) {
   return (
     <div>
-      <p className={`text-xs font-semibold mb-2 ${color}`}>{title}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+      <p className={`text-sm font-bold uppercase tracking-wider mb-3 ${color}`}>{title}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
         {items.length > 0 ? items.map((item) => item.text).join(', ') : 'No data yet'}
       </p>
     </div>
@@ -705,43 +727,45 @@ function KeywordGroup({ title, color, items }: { title: string; color: string; i
 
 function ReviewCard({ title, color, icon, reviews }: { title: string; color: string; icon: ReactNode; reviews: Review[] }) {
   return (
-    <article className="bg-white dark:bg-google-darkSurface p-6 rounded-xl shadow-sm border border-gray-100 dark:border-google-darkBorder">
-      <h3 className={`text-lg font-semibold mb-4 flex items-center ${color}`}>{icon}{title}</h3>
+    <article className="bg-white dark:bg-google-darkSurface p-8 sm:p-10 rounded-[2rem] shadow-sm border border-gray-100 dark:border-google-darkBorder h-full">
+      <h3 className={`text-2xl font-bold mb-8 flex items-center ${color}`}>{icon}{title}</h3>
       {reviews.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400">No reviews in this category.</p>
+        <p className="text-gray-500 dark:text-gray-400">No reviews in this category.</p>
       ) : (
-        <div className="space-y-4">
-          {reviews.map((review) => (
-            <div key={review.review_id ?? `${review.text}-${review.date}`} className="pb-4 border-b border-gray-100 dark:border-gray-700/50 last:border-0 last:pb-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-yellow-500 text-sm tracking-wider">{renderStars(review.rating)}</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${review.sentiment === 'Positive' ? 'text-google-green bg-green-50 dark:bg-green-900/20' : 'text-google-red bg-red-50 dark:bg-red-900/20'}`}>
-                    {(review.confidence * 100).toFixed(1)}% confidence
+        <div className="space-y-8">
+          {reviews.map((review, i) => (
+            <div key={review.review_id ?? `${review.text}-${review.date}`} className={`pb-8 ${i !== reviews.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-yellow-500 text-lg tracking-widest">{renderStars(review.rating)}</span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${review.sentiment === 'Positive' ? 'text-google-green bg-green-50 dark:bg-green-900/30' : 'text-google-red bg-red-50 dark:bg-red-900/30'}`}>
+                    {(review.confidence * 100).toFixed(0)}% confidence
                   </span>
                 </div>
                 {review.author && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <span className="font-medium">{review.author}</span>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <span className="text-gray-700 dark:text-gray-300">{review.author}</span>
                     {review.date && <span> · {formatReviewDate(review.date)}</span>}
                   </div>
                 )}
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
-                    Original review
-                  </p>
-                  <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed break-words">
+                  {review.translation_en && review.translation_en !== review.text && (
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                      Original review
+                    </p>
+                  )}
+                  <p className="text-gray-800 dark:text-gray-200 text-base leading-relaxed break-words font-medium">
                     “{review.text}”
                   </p>
                 </div>
-                {review.translation_en && (
-                  <div className="rounded-lg border border-blue-100 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/25 px-3 py-2.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-google-blue mb-1">
+                {review.translation_en && review.translation_en !== review.text && (
+                  <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-5 mt-4">
+                    <p className="text-xs font-bold uppercase tracking-wider text-google-blue mb-2">
                       English translation
                     </p>
-                    <p className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed break-words">
+                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed break-words font-medium">
                       {review.translation_en}
                     </p>
                   </div>
