@@ -214,7 +214,7 @@ function App() {
   const [resultData, setResultData] = useState<ResultData | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null)
 
-  const eventSourceRef = useRef<EventSource | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const isFinishedRef = useRef(false)
 
   useEffect(() => {
@@ -229,7 +229,7 @@ function App() {
   }, [isLoading])
 
   useEffect(() => {
-    return () => eventSourceRef.current?.close()
+    return () => abortControllerRef.current?.abort()
   }, [])
 
   const estimatedRemaining = useMemo(() => {
@@ -258,8 +258,8 @@ function App() {
   }, [resultData])
 
   const closeStream = () => {
-    eventSourceRef.current?.close()
-    eventSourceRef.current = null
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
   }
 
   const cancelAnalysis = () => {
@@ -294,56 +294,74 @@ function App() {
     setSelectedPlace(null)
     isFinishedRef.current = false
 
-    const stream = new EventSource(buildAnalyzeUrl(trimmedInput))
-    eventSourceRef.current = stream
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
 
-    stream.onmessage = (message) => {
-      try {
-        const data = JSON.parse(message.data) as StreamMessage
+    fetch(buildAnalyzeUrl(trimmedInput), {
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      },
+      signal: abortController.signal
+    }).then(async (response) => {
+      if (!response.ok) throw new Error('Network error')
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No readable stream')
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+        for (const part of parts) {
+          if (part.startsWith('data: ')) {
+            const dataStr = part.slice(6)
+            try {
+              const data = JSON.parse(dataStr) as StreamMessage
 
-        if (data.status) setStatusText(data.status)
-        if (typeof data.progress === 'number') {
-          setProgress(Math.max(0, Math.min(100, data.progress)))
-        }
-        if (typeof data.current === 'number' && typeof data.total === 'number') {
-          setReviewProgress({ current: data.current, total: data.total })
-        }
-        if (data.warning && data.status) setWarningText(data.status)
-        if (data.place) setSelectedPlace(data.place)
+              if (data.status) setStatusText(data.status)
+              if (typeof data.progress === 'number') {
+                setProgress(Math.max(0, Math.min(100, data.progress)))
+              }
+              if (typeof data.current === 'number' && typeof data.total === 'number') {
+                setReviewProgress({ current: data.current, total: data.total })
+              }
+              if (data.warning && data.status) setWarningText(data.status)
+              if (data.place) setSelectedPlace(data.place)
 
-        if (data.error) {
-          isFinishedRef.current = true
-          setErrorMsg(data.status || 'An error occurred while processing the data.')
-          setIsLoading(false)
-          closeStream()
-          return
-        }
+              if (data.error) {
+                isFinishedRef.current = true
+                setErrorMsg(data.status || 'An error occurred while processing the data.')
+                setIsLoading(false)
+                closeStream()
+                return
+              }
 
-        if (isResultData(data)) {
-          isFinishedRef.current = true
-          setResultData(data)
-          setProgress(100)
-          setIsLoading(false)
-          closeStream()
+              if (isResultData(data)) {
+                isFinishedRef.current = true
+                setResultData(data)
+                setProgress(100)
+                setIsLoading(false)
+                closeStream()
+              }
+            } catch (error) {
+              console.error('Invalid SSE response:', error)
+              isFinishedRef.current = true
+              setErrorMsg('The server returned an unreadable response.')
+              setIsLoading(false)
+              closeStream()
+            }
+          }
         }
-      } catch (error) {
-        console.error('Invalid SSE response:', error)
-        isFinishedRef.current = true
-        setErrorMsg('The server returned an unreadable response.')
-        setIsLoading(false)
-        closeStream()
       }
-    }
-
-    stream.onerror = () => {
-      if (!isFinishedRef.current) {
-        setErrorMsg(
-          'Backend connection failed. Make sure the backend is running on port 8001.',
-        )
+    }).catch((error) => {
+      if (error.name !== 'AbortError' && !isFinishedRef.current) {
+        setErrorMsg('Backend connection failed. Make sure the backend is running on port 8001.')
         setIsLoading(false)
       }
       closeStream()
-    }
+    })
   }
 
   return (
