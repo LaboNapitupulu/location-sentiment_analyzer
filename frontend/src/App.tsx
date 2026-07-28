@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   MapPin,
   MessageSquare,
+  Sparkles,
   ShieldAlert,
   ThumbsDown,
   ThumbsUp,
@@ -375,7 +376,15 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-google-light dark:bg-google-darkBg text-gray-900 dark:text-google-darkText flex flex-col items-center pt-20 pb-20 font-sans transition-colors duration-200">
+    <main className="min-h-screen relative bg-google-light dark:bg-google-darkBg text-gray-900 dark:text-google-darkText flex flex-col items-center pt-20 pb-20 font-sans transition-colors duration-300">
+      
+      {/* Subtle Background Glows for mature/premium aesthetic */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-google-blue/10 dark:bg-google-blue/5 rounded-full blur-[120px]" />
+        <div className="absolute top-[20%] -left-[10%] w-[40%] h-[40%] bg-google-red/10 dark:bg-google-red/5 rounded-full blur-[100px]" />
+        <div className="absolute -bottom-[10%] left-[20%] w-[60%] h-[60%] bg-google-yellow/5 dark:bg-google-yellow/5 rounded-full blur-[120px]" />
+      </div>
+
       <button
         type="button"
         onClick={() => setIsDark((value) => !value)}
@@ -393,8 +402,11 @@ function App() {
         )}
       </button>
 
-      <section className="flex flex-col items-center w-full max-w-2xl px-4">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-3 text-center">
+      <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4">
+        <div className="inline-flex items-center px-3 py-1 mb-6 text-xs font-medium rounded-full bg-blue-50 dark:bg-blue-900/30 text-google-blue border border-blue-100 dark:border-blue-800 shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" /> AI-Powered Sentiment Analysis
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 text-center tracking-tight">
           <span className="text-google-blue">Geo</span>
           <span className="text-google-red">Sen</span>
           <span className="text-google-yellow">ti</span>
@@ -409,9 +421,9 @@ function App() {
           <label htmlFor="location-input" className="sr-only">
             Google Maps place link
           </label>
-          <div className="relative">
-            <div className={`w-full flex items-center bg-white dark:bg-google-darkSurface rounded-full border ${isLoading ? 'border-google-blue ring-2 ring-blue-100 dark:ring-blue-900' : 'border-gray-200 dark:border-google-darkBorder'} hover:shadow-md focus-within:shadow-md transition-all px-5 py-3`}>
-              <MapPin className="w-5 h-5 text-gray-400 mr-3 shrink-0" />
+          <div className="relative group">
+            <div className={`w-full flex items-center bg-white/80 dark:bg-google-darkSurface/80 backdrop-blur-md rounded-2xl border ${isLoading ? 'border-google-blue ring-4 ring-google-blue/20 dark:ring-google-blue/20' : 'border-gray-200 dark:border-gray-700'} hover:border-google-blue/50 focus-within:border-google-blue focus-within:ring-4 focus-within:ring-google-blue/10 focus-within:shadow-xl hover:shadow-lg transition-all duration-300 px-6 py-4`}>
+              <MapPin className="w-6 h-6 text-google-blue mr-3 shrink-0 transition-transform group-focus-within:scale-110" />
               <input
                 id="location-input"
                 type="text"
@@ -438,7 +450,7 @@ function App() {
 
           </div>
 
-          <p className="mt-2 px-4 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-4 px-4 text-sm text-gray-500 dark:text-gray-400 text-center font-medium">
             In Google Maps, select a place → Share → Copy link, then paste it here.
           </p>
 
@@ -499,7 +511,7 @@ function App() {
       </section>
 
       {resultData && !isLoading && (
-        <section className="w-full max-w-6xl mt-16 px-4">
+        <section className="relative z-10 w-full max-w-6xl mt-24 px-4">
           <div className="flex flex-col sm:flex-row items-center justify-between mb-12">
             <div className="text-center sm:text-left">
               <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sentiment Analysis Results</h2>
@@ -541,8 +553,8 @@ function App() {
             </div>
           )}
 
-          <div className="flex flex-col gap-10">
-            <div className="bg-white dark:bg-google-darkSurface p-8 sm:p-10 rounded-[2rem] shadow-sm border border-gray-100 dark:border-google-darkBorder flex flex-col lg:flex-row gap-10">
+          <div className="flex flex-col gap-8 sm:gap-12">
+            <div className="bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-white/50 dark:border-white/5 flex flex-col lg:flex-row gap-10 hover:shadow-2xl hover:border-gray-200/80 dark:hover:border-gray-700 transition-all duration-500">
               <div className="flex-1 flex flex-col items-center">
                 <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-gray-100">Sentiment Distribution</h3>
                 <div className="w-full h-80">
@@ -613,9 +625,9 @@ function PlacePreview({ place }: { place: PlaceDetails }) {
     : ''
 
   return (
-    <article className="mt-6 overflow-hidden bg-white dark:bg-google-darkSurface border border-gray-200 dark:border-google-darkBorder rounded-[1.5rem] shadow-sm max-w-2xl w-full mx-auto">
-      <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr]">
-        <div className="h-48 sm:h-full min-h-40 bg-gray-100 dark:bg-gray-800 relative">
+    <article className="mt-8 overflow-hidden bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-md border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-lg shadow-gray-200/40 dark:shadow-black/20 max-w-2xl w-full mx-auto hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+      <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr]">
+        <div className="h-48 sm:h-full min-h-48 bg-gray-100 dark:bg-gray-800 relative">
           {showPhoto ? (
             <img
               src={place.photo_url ?? ''}
@@ -724,7 +736,7 @@ function KeywordGroup({ title, color, items }: { title: string; color: string; i
 
 function ReviewCard({ title, color, icon, reviews }: { title: string; color: string; icon: ReactNode; reviews: Review[] }) {
   return (
-    <article className="bg-white dark:bg-google-darkSurface p-8 sm:p-10 rounded-[2rem] shadow-sm border border-gray-100 dark:border-google-darkBorder h-full">
+    <article className="bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-white/50 dark:border-white/5 h-full hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
       <h3 className={`text-2xl font-bold mb-8 flex items-center ${color}`}>{icon}{title}</h3>
       {reviews.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400">No reviews in this category.</p>

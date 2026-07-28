@@ -12,7 +12,7 @@ A full-stack, real-time analytics dashboard engineered to extract, process, and 
 
 ## Project Overview
 
-GeoSentiment Analyzer provides an interactive, live look at public sentiment for any location on Google Maps. It integrates a custom headless browser scraper to extract up to 100 reviews in real-time, processes them through IndoBERT for sentiment classification, and translates the featured reviews to English locally. All insights are presented through a clean, responsive dashboard.
+GeoSentiment Analyzer provides an interactive, live look at public sentiment for any location on Google Maps. It integrates a custom headless browser scraper to extract up to 100 reviews in real-time, processes them through IndoBERT for sentiment classification, and translates the featured reviews to English locally. All insights are presented through a clean, responsive, and modern dashboard.
 
 ---
 
@@ -31,13 +31,14 @@ GeoSentiment Analyzer provides an interactive, live look at public sentiment for
 - **Backend:** Python 3.11, FastAPI, SSE-Starlette
 - **Scraping Engine:** Playwright (Chromium)
 - **Machine Learning:** PyTorch, Transformers (IndoBERT)
-- **Frontend:** React, Vite, Tailwind CSS
+- **Frontend:** React, Vite, Tailwind CSS, Recharts
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
+
 - Windows 10/11
 - Node.js 20 or newer
 - Python 3.11
@@ -46,12 +47,14 @@ GeoSentiment Analyzer provides an interactive, live look at public sentiment for
 ### Installation & Setup
 
 **1. Clone the repository:**
+
 ```bash
 git clone https://github.com/LaboNapitupulu/location-sentiment_analyzer.git
 cd location-sentiment_analyzer
 ```
 
 **2. Setup Backend Dependencies (using `uv`):**
+
 ```powershell
 $env:UV_CACHE_DIR = "$PWD\.uv-cache"
 $env:UV_PYTHON_INSTALL_DIR = "$PWD\.uv-python"
@@ -62,24 +65,30 @@ backend\.venv\Scripts\python.exe -m playwright install chromium
 ```
 
 **3. Configure Environment Variables:**
+
 ```powershell
 Copy-Item .env.example .env
 ```
 
 **4. Start the API Server:**
+
 ```powershell
 cd backend
 .\.venv\Scripts\python.exe main.py
 ```
+
 *(Note: IndoBERT and Translation models will be downloaded automatically on the first start/request).*
 
 **5. Start the Frontend:**
+
 Open a new terminal window:
+
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
+
 Open `http://localhost:5173` in your browser and paste any Google Maps URL to start the analysis!
 
 ---
@@ -87,23 +96,26 @@ Open `http://localhost:5173` in your browser and paste any Google Maps URL to st
 ## Troubleshooting: Google Maps "Limited View"
 
 If Google Maps hides reviews due to unusual traffic, create a local authenticated browser profile:
+
 ```powershell
 cd backend
 .\.venv\Scripts\python.exe google_maps_session.py
 ```
+
 Log in manually in the Chromium window, ensure reviews are visible, and press Enter in the terminal. The profile is saved in `.browser-profile`. Update your `.env` to include: `PLAYWRIGHT_USER_DATA_DIR=.browser-profile`.
 
 ---
 
 ## Deployment Guide
 
-Deploying this application requires hosting both the FastAPI backend and the React frontend. Because the backend relies on Playwright (Chromium) and heavy Machine Learning models, standard serverless platforms (like Vercel or Heroku free tier) are **not recommended**.
+Deploying this application requires hosting both the FastAPI backend and the React frontend. Because the backend relies on Playwright (Chromium) and heavy Machine Learning models, standard serverless platforms (like Vercel or Heroku free tier) are **not recommended for the backend**.
 
 **Recommended Deployment Architecture:**
-1. **Frontend (React):** 
+
+1. **Frontend (React):**
    - Deploy seamlessly on **Vercel**, **Netlify**, or **Cloudflare Pages**.
-   - Simply connect your GitHub repository and set the build command to `npm run build` and output directory to `dist`.
-   
+   - Connect your GitHub repository and set the build command to `npm run build` and output directory to `dist`.
+
 2. **Backend (FastAPI + Playwright + PyTorch):**
    - Deploy on a **VPS (Virtual Private Server)** like DigitalOcean Droplets, AWS EC2, or Google Cloud Compute Engine (minimum 2GB RAM recommended due to ML models).
    - Use **Docker** to containerize the FastAPI app along with Playwright dependencies.
