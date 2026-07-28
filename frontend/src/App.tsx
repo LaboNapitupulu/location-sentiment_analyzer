@@ -105,12 +105,9 @@ function isResultData(value: StreamMessage): value is StreamMessage & ResultData
   )
 }
 
-function buildAnalyzeUrl(input: string): string {
-  const endpoint = API_BASE_URL
-    ? new URL(`${API_BASE_URL}/api/analyze`)
-    : new URL('/api/analyze', window.location.origin)
-  endpoint.searchParams.set('url', input)
-  return endpoint.toString()
+const buildAnalyzeUrl = (input: string) => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://condiment-vexingly-moaner.ngrok-free.dev'
+  return `${baseUrl}/api/analyze?url=${encodeURIComponent(input)}`
 }
 
 function isMapsUrl(value: string): boolean {
