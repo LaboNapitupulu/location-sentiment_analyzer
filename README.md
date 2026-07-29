@@ -106,20 +106,19 @@ Log in manually in the Chromium window, ensure reviews are visible, and press En
 
 ---
 
-## Deployment Guide
+## Deployment Architecture (Portfolio Setup)
 
-Deploying this application requires hosting both the FastAPI backend and the React frontend. Because the backend relies on Playwright (Chromium) and heavy Machine Learning models, standard serverless platforms (like Vercel or Heroku free tier) are **not recommended for the backend**.
+To keep hosting costs at zero while running heavy Machine Learning models and a headless Chromium browser, this project utilizes a hybrid deployment approach:
 
-**Recommended Deployment Architecture:**
+1. **Frontend (Cloud):**
+   - Deployed on **Vercel** (`location-sentiment-analyzer.vercel.app`).
+   - Automatically builds and serves the React + Vite static assets globally.
 
-1. **Frontend (React):**
-   - Deploy seamlessly on **Vercel**, **Netlify**, or **Cloudflare Pages**.
-   - Connect your GitHub repository and set the build command to `npm run build` and output directory to `dist`.
+2. **Backend (Local Machine + Ngrok):**
+   - The FastAPI backend, PyTorch models, and Playwright scraper run locally on the developer's machine to leverage local RAM and CPU.
+   - The local backend is securely exposed to the internet and connected to the Vercel frontend using **Ngrok** (e.g., `ngrok http 8001`).
 
-2. **Backend (FastAPI + Playwright + PyTorch):**
-   - Deploy on a **VPS (Virtual Private Server)** like DigitalOcean Droplets, AWS EC2, or Google Cloud Compute Engine (minimum 2GB RAM recommended due to ML models).
-   - Use **Docker** to containerize the FastAPI app along with Playwright dependencies.
-   - Run via `gunicorn` with `uvicorn` workers and expose via a reverse proxy like **Nginx**.
+This architecture ensures the heavy backend requirements (2GB+ RAM for NLP models and browser instances) are met without requiring an expensive cloud VPS.
 
 ---
 
