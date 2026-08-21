@@ -78,6 +78,7 @@ export function SearchBar({ input, setInput, isLoading, startAnalysis, cancelAna
             type="button" 
             onClick={cancelAnalysis} 
             className="relative overflow-hidden bg-white/80 dark:bg-black/50 backdrop-blur-md border border-red-200/50 dark:border-red-500/30 text-google-red font-semibold py-3 px-8 rounded-full shadow-lg transition-colors group"
+            aria-label="Cancel Analysis"
           >
             <span className="relative z-10">✕ Cancel Analysis</span>
             <div className="absolute inset-0 bg-red-100 dark:bg-red-900/40 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300" />
@@ -89,6 +90,7 @@ export function SearchBar({ input, setInput, isLoading, startAnalysis, cancelAna
             type="submit" 
             disabled={!input.trim()} 
             className="relative overflow-hidden bg-gradient-to-r from-google-blue to-blue-600 text-white font-semibold py-3 px-8 rounded-full shadow-lg disabled:opacity-50 disabled:grayscale transition-all group"
+            aria-label="Analyze Sentiment"
           >
             <span className="relative z-10 flex items-center">
               <Sparkles className="w-4 h-4 mr-2" />
