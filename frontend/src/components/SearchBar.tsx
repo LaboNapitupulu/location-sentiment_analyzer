@@ -1,4 +1,4 @@
-import { FormEvent } from 'react'
+import type { FormEvent } from 'react'
 import { MapPin, LoaderCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'

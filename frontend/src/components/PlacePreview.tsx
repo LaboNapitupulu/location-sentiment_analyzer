@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ExternalLink, ImageOff } from 'lucide-react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import { cn } from '../lib/utils'
 
 export type PlaceDetails = {
   place_id: string
