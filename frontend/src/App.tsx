@@ -1,59 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import {
-  AlertCircle,
-  Clock3,
-  ExternalLink,
-  ImageOff,
-  LoaderCircle,
-  MapPin,
-  MessageSquare,
-  Sparkles,
-  ShieldAlert,
-  ThumbsDown,
-  ThumbsUp,
-} from 'lucide-react'
+import type { FormEvent } from 'react'
+import { Clock3, Sparkles, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-type Sentiment = 'Positive' | 'Negative' | 'Neutral'
+import { DynamicBackground } from './components/DynamicBackground'
+import { SearchBar } from './components/SearchBar'
+import { PlacePreview, type PlaceDetails } from './components/PlacePreview'
+import { SentimentChart } from './components/SentimentChart'
+import { ReviewCard, type Review, type Sentiment } from './components/ReviewCard'
 
-type Review = {
-  review_id?: string
-  text: string
-  rating: number | null
-  sentiment: Sentiment
-  confidence: number
-  author?: string
-  date?: string
-  translation_en?: string
-}
 
 type Stats = Record<Sentiment, number>
-type Keyword = { text: string; value: number }
+export type Keyword = { text: string; value: number }
 
-type PlaceDetails = {
-  place_id: string
-  display_name: string
-  formatted_address: string
-  primary_type: string
-  google_maps_uri?: string
-  map_uri: string
-  map_provider: string
-  analysis_value: string
-  photo_url: string | null
-  provider: 'google' | 'openstreetmap'
-  data_attribution: string
-  latitude?: number | null
-  longitude?: number | null
-  photo_attributions: Array<{
-    display_name: string
-    uri: string
-    license?: string
-    license_uri?: string
-  }>
-}
-
-type ResultData = {
+export type ResultData = {
   status: 'Complete'
   stats: Stats
   reviews: Review[]
@@ -92,7 +52,6 @@ type StreamMessage = {
   place?: PlaceDetails
 }
 
-
 function isResultData(value: StreamMessage): value is StreamMessage & ResultData {
   return (
     value.status === 'Complete' &&
@@ -124,71 +83,19 @@ function isMapsUrl(value: string): boolean {
     if (hostname === 'maps.app.goo.gl') return true
     if (hostname === 'goo.gl') return parsed.pathname.startsWith('/maps')
     const googleHosts = new Set([
-      'google.com',
-      'www.google.com',
-      'maps.google.com',
-      'google.co.id',
-      'www.google.co.id',
-      'maps.google.co.id',
-      'google.co.uk',
-      'www.google.co.uk',
-      'maps.google.co.uk',
-      'google.com.au',
-      'www.google.com.au',
-      'maps.google.com.au',
-      'google.ca',
-      'www.google.ca',
-      'maps.google.ca',
-      'google.de',
-      'www.google.de',
-      'maps.google.de',
-      'google.fr',
-      'www.google.fr',
-      'maps.google.fr',
-      'google.co.jp',
-      'www.google.co.jp',
-      'maps.google.co.jp',
-      'google.co.kr',
-      'www.google.co.kr',
-      'maps.google.co.kr',
-      'google.com.sg',
-      'www.google.com.sg',
-      'maps.google.com.sg',
-      'google.com.my',
-      'www.google.com.my',
-      'maps.google.com.my',
+      'google.com', 'www.google.com', 'maps.google.com', 'google.co.id',
+      'www.google.co.id', 'maps.google.co.id', 'google.co.uk', 'www.google.co.uk',
+      'maps.google.co.uk', 'google.com.au', 'www.google.com.au', 'maps.google.com.au',
+      'google.ca', 'www.google.ca', 'maps.google.ca', 'google.de', 'www.google.de',
+      'maps.google.de', 'google.fr', 'www.google.fr', 'maps.google.fr', 'google.co.jp',
+      'www.google.co.jp', 'maps.google.co.jp', 'google.co.kr', 'www.google.co.kr',
+      'maps.google.co.kr', 'google.com.sg', 'www.google.com.sg', 'maps.google.com.sg',
+      'google.com.my', 'www.google.com.my', 'maps.google.com.my',
     ])
     return googleHosts.has(hostname) && parsed.pathname.includes('/maps')
   } catch {
     return false
   }
-}
-
-function renderStars(rating: number | null): string {
-  if (rating === null || !Number.isFinite(rating)) return 'Rating unavailable'
-  const safeRating = Math.max(0, Math.min(5, Math.round(rating)))
-  return `${'★'.repeat(safeRating)}${'☆'.repeat(5 - safeRating)}`
-}
-
-function formatReviewDate(value: string): string {
-  let date = value.trim()
-  const wasEdited = /^diedit\s+/i.test(date)
-  date = date.replace(/^diedit\s+/i, '')
-  const exactDates: Record<string, string> = {
-    'baru saja': 'just now',
-    'kemarin': 'yesterday',
-    'sehari lalu': 'a day ago',
-    'seminggu lalu': 'a week ago',
-    'sebulan lalu': 'a month ago',
-    'setahun lalu': 'a year ago',
-  }
-  let translated = exactDates[date.toLowerCase()] ?? date
-  translated = translated
-    .replace(/^(\d+)\s+hari lalu$/i, '$1 days ago')
-    .replace(/^(\d+)\s+minggu lalu$/i, '$1 weeks ago')
-    .replace(/^(\d+)\s+bulan lalu$/i, '$1 months ago')
-    .replace(/^(\d+)\s+tahun lalu$/i, '$1 years ago')
-  return wasEdited ? `Edited ${translated}` : translated
 }
 
 function App() {
@@ -203,9 +110,7 @@ function App() {
   const [warningText, setWarningText] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const [progress, setProgress] = useState(0)
-  const [reviewProgress, setReviewProgress] = useState<{ current: number; total: number } | null>(
-    null,
-  )
+  const [reviewProgress, setReviewProgress] = useState<{ current: number; total: number } | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [resultData, setResultData] = useState<ResultData | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null)
@@ -232,15 +137,6 @@ function App() {
     if (!isLoading || progress < 5 || progress >= 100 || elapsedSeconds < 2) return null
     return Math.max(0, Math.round((elapsedSeconds * (100 - progress)) / progress))
   }, [elapsedSeconds, isLoading, progress])
-
-  const chartData = useMemo(() => {
-    if (!resultData) return []
-    return [
-      { name: 'Positive', value: resultData.stats.Positive, color: '#34A853' },
-      { name: 'Negative', value: resultData.stats.Negative, color: '#EA4335' },
-      { name: 'Neutral', value: resultData.stats.Neutral, color: '#FBBC05' },
-    ].filter((item) => item.value > 0)
-  }, [resultData])
 
   const topBottomReviews = useMemo(() => {
     if (!resultData) return { top: [], bottom: [] }
@@ -271,9 +167,7 @@ function App() {
     const trimmedInput = input.trim()
     if (!trimmedInput || isLoading) return
     if (!isMapsUrl(trimmedInput)) {
-      setErrorMsg(
-        'Paste an official Google Maps place link, such as https://maps.app.goo.gl/...',
-      )
+      setErrorMsg('Paste an official Google Maps place link, such as https://maps.app.goo.gl/...')
       setSelectedPlace(null)
       return
     }
@@ -374,415 +268,210 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen relative bg-google-light dark:bg-google-darkBg text-gray-900 dark:text-google-darkText flex flex-col items-center pt-20 pb-20 font-sans transition-colors duration-300">
+    <main className="min-h-screen relative bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-100 flex flex-col items-center pt-20 pb-24 font-sans transition-colors duration-500 selection:bg-google-blue/30 overflow-x-hidden">
       
-      {/* Subtle Background Glows for mature/premium aesthetic */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-google-blue/10 dark:bg-google-blue/5 rounded-full blur-[120px]" />
-        <div className="absolute top-[20%] -left-[10%] w-[40%] h-[40%] bg-google-red/10 dark:bg-google-red/5 rounded-full blur-[100px]" />
-        <div className="absolute -bottom-[10%] left-[20%] w-[60%] h-[60%] bg-google-yellow/5 dark:bg-google-yellow/5 rounded-full blur-[120px]" />
-      </div>
+      {/* Dynamic 3D Animated Background */}
+      <DynamicBackground />
 
-      <button
+      {/* Theme Toggle */}
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 180 }}
+        whileTap={{ scale: 0.9 }}
+        transition={{ duration: 0.3 }}
         type="button"
         onClick={() => setIsDark((value) => !value)}
-        className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        className="absolute top-6 right-6 p-3 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/50 dark:border-white/10 shadow-lg hover:shadow-xl transition-all z-50"
         aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       >
-        {isDark ? (
-          <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-          </svg>
-        )}
-      </button>
+        <AnimatePresence mode="wait">
+          {isDark ? (
+            <motion.svg key="sun" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </motion.svg>
+          ) : (
+            <motion.svg key="moon" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </motion.svg>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
+      {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4">
-        <div className="inline-flex items-center px-3 py-1 mb-6 text-xs font-medium rounded-full bg-blue-50 dark:bg-blue-900/30 text-google-blue border border-blue-100 dark:border-blue-800 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 mr-1.5" /> AI-Powered Sentiment Analysis
-        </div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 text-center tracking-tight">
-          <span className="text-google-blue">Geo</span>
-          <span className="text-google-red">Sen</span>
-          <span className="text-google-yellow">ti</span>
-          <span className="text-google-blue">ment</span>
-          <span className="text-google-green ml-2">Analyzer</span>
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 text-center">
-          Paste a Google Maps place link to collect and analyze its reviews.
-        </p>
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center px-4 py-1.5 mb-8 text-xs font-bold uppercase tracking-widest rounded-full bg-white/60 dark:bg-white/10 text-gray-800 dark:text-gray-200 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-md"
+        >
+          <Sparkles className="w-4 h-4 mr-2 text-google-blue" /> AI-Powered Analysis
+        </motion.div>
+        
+        <motion.h1 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className="text-5xl sm:text-7xl font-black mb-6 text-center tracking-tighter drop-shadow-sm"
+        >
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">Geo</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-red to-red-400">Sen</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-yellow to-yellow-400">ti</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">ment</span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-green to-green-400 ml-2">Analyzer</span>
+        </motion.h1>
 
-        <form className="w-full" onSubmit={startAnalysis}>
-          <label htmlFor="location-input" className="sr-only">
-            Google Maps place link
-          </label>
-          <div className="relative group">
-            <div className={`w-full flex items-center bg-white/80 dark:bg-google-darkSurface/80 backdrop-blur-md rounded-2xl border ${isLoading ? 'border-google-blue ring-4 ring-google-blue/20 dark:ring-google-blue/20' : 'border-gray-200 dark:border-gray-700'} hover:border-google-blue/50 focus-within:border-google-blue focus-within:ring-4 focus-within:ring-google-blue/10 focus-within:shadow-xl hover:shadow-lg transition-all duration-300 px-6 py-4`}>
-              <MapPin className="w-6 h-6 text-google-blue mr-3 shrink-0 transition-transform group-focus-within:scale-110" />
-              <input
-                id="location-input"
-                type="text"
-                inputMode="url"
-                placeholder="https://maps.app.goo.gl/..."
-                className="flex-1 min-w-0 outline-none text-gray-700 dark:text-google-darkText bg-transparent disabled:opacity-50"
-                value={input}
-                onChange={(event) => {
-                  setInput(event.target.value)
-                  setSelectedPlace(null)
-                  setErrorMsg('')
-                }}
-                disabled={isLoading}
-                maxLength={2048}
-                autoComplete="off"
-              />
-              {isLoading && (
-                <LoaderCircle
-                  className="w-5 h-5 ml-3 text-google-blue animate-spin shrink-0"
-                  aria-label="Processing place"
-                />
-              )}
-            </div>
+        <SearchBar 
+          input={input} 
+          setInput={setInput} 
+          isLoading={isLoading} 
+          startAnalysis={startAnalysis} 
+          cancelAnalysis={cancelAnalysis} 
+        />
 
-          </div>
-
-          <p className="mt-4 px-4 text-sm text-gray-500 dark:text-gray-400 text-center font-medium">
-            In Google Maps, select a place → Share → Copy link, then paste it here.
-          </p>
-
+        <AnimatePresence mode="popLayout">
           {selectedPlace && (
-            <PlacePreview place={selectedPlace} />
+            <PlacePreview key="place-preview" place={selectedPlace} />
           )}
 
-          <div className="mt-6 flex justify-center">
-            {isLoading ? (
-              <button type="button" onClick={cancelAnalysis} className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 hover:bg-red-100 text-google-red font-medium py-2 px-4 rounded transition-colors">
-                ✕ Cancel
-              </button>
-            ) : (
-              <button type="submit" disabled={!input.trim()} className="bg-white dark:bg-google-darkSurface border border-gray-200 dark:border-google-darkBorder hover:shadow-sm disabled:opacity-50 text-gray-700 dark:text-google-darkText font-medium py-2 px-5 rounded transition-all">
-                Analyze Sentiment
-              </button>
-            )}
-          </div>
-        </form>
-
-        {isLoading && (
-          <div className="mt-8 w-full max-w-lg" aria-live="polite">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-google-blue font-medium">{statusText}</span>
-              <span className="text-gray-500">{progress}%</span>
-            </div>
-            <div
-              className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
+          {isLoading && (
+            <motion.div 
+              key="loading-status"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-10 w-full max-w-lg bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 p-6 rounded-3xl shadow-xl overflow-hidden relative"
             >
-              <div className="h-full bg-google-blue transition-all duration-500" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-              {reviewProgress && reviewProgress.total > 0 && (
-                <span>Reviews: {reviewProgress.current}/{reviewProgress.total}</span>
-              )}
-              <span className="flex items-center"><Clock3 className="w-3.5 h-3.5 mr-1" /> Running for {elapsedSeconds} seconds</span>
-              {estimatedRemaining !== null && <span>Estimated time left: ±{estimatedRemaining} seconds</span>}
-            </div>
-          </div>
-        )}
+              {/* Animated scanning line */}
+              <motion.div 
+                className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-google-blue to-transparent"
+                animate={{ y: [0, 150, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              />
+              
+              <div className="flex items-center justify-between text-sm mb-3">
+                <span className="text-google-blue font-bold tracking-wide">{statusText}</span>
+                <span className="text-gray-500 font-bold">{progress}%</span>
+              </div>
+              <div
+                className="w-full h-2.5 bg-gray-200/50 dark:bg-gray-800/50 rounded-full overflow-hidden shadow-inner"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress}
+              >
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-google-blue via-blue-500 to-cyan-400"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ ease: "easeOut" }}
+                />
+              </div>
+              <div className="mt-4 flex flex-wrap justify-between gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                {reviewProgress && reviewProgress.total > 0 && (
+                  <span>Reviews: {reviewProgress.current}/{reviewProgress.total}</span>
+                )}
+                <span className="flex items-center"><Clock3 className="w-3.5 h-3.5 mr-1.5 text-google-blue" /> {elapsedSeconds}s</span>
+                {estimatedRemaining !== null && <span>ETA: {estimatedRemaining}s</span>}
+              </div>
+            </motion.div>
+          )}
 
-        {warningText && !isLoading && !errorMsg && (
-          <div className="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg text-yellow-800 dark:text-yellow-300 text-sm w-full">
-            {warningText}
-          </div>
-        )}
+          {warningText && !isLoading && !errorMsg && (
+            <motion.div 
+              key="warning"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-8 p-4 bg-yellow-50/80 dark:bg-yellow-900/30 backdrop-blur-md border border-yellow-200/50 dark:border-yellow-700/50 rounded-2xl text-yellow-800 dark:text-yellow-300 text-sm font-medium shadow-lg w-full max-w-lg"
+            >
+              {warningText}
+            </motion.div>
+          )}
 
-        {errorMsg && !isLoading && (
-          <div className="mt-8 flex flex-col items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-google-red w-full max-w-lg" role="alert">
-            <AlertCircle className="w-6 h-6 mb-2" />
-            <p className="font-medium text-center">{errorMsg}</p>
-          </div>
-        )}
+          {errorMsg && !isLoading && (
+            <motion.div 
+              key="error"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-8 flex flex-col items-center p-6 bg-red-50/80 dark:bg-red-900/30 backdrop-blur-md border border-red-200/50 dark:border-red-700/50 rounded-3xl text-google-red w-full max-w-lg shadow-2xl shadow-red-500/10" 
+              role="alert"
+            >
+              <motion.div
+                animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <ShieldAlert className="w-10 h-10 mb-3" />
+              </motion.div>
+              <p className="font-bold text-center text-lg">{errorMsg}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
-      {resultData && !isLoading && (
-        <section className="relative z-10 w-full max-w-6xl mt-24 px-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-12">
-            <div className="text-center sm:text-left">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sentiment Analysis Results</h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
-                {resultData.meta.analyzed_count} reviews analyzed using {resultData.meta.model_id}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">Review source: Google Maps · Data is not retained</p>
-            </div>
-            <button
-              onClick={clearResults}
-              className="mt-6 sm:mt-0 flex items-center px-6 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium rounded-full transition-colors"
-            >
-              Clear Results
-            </button>
-          </div>
-
-          {resultData.anomalies.length > 0 && (
-            <div className="mb-8 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-5 flex items-start">
-              <ShieldAlert className="w-6 h-6 text-yellow-600 dark:text-yellow-500 mr-4 shrink-0 mt-0.5" />
-              <div className="min-w-0">
-                <h3 className="font-semibold text-yellow-800 dark:text-yellow-400">Potential rating and sentiment anomalies ({resultData.anomalies.length})</h3>
-                <p className="text-yellow-700 dark:text-yellow-500 text-sm mt-1">The star rating conflicts with the text sentiment. This is an indicator, not proof of sarcasm or spam.</p>
-                <div className="mt-3 space-y-2">
-                  {resultData.anomalies.slice(0, 3).map((review) => (
-                    <div key={review.review_id ?? `${review.text}-${review.date}`} className="text-sm bg-white dark:bg-black/20 p-3 rounded border border-yellow-100 dark:border-yellow-800/50 break-words">
-                      <span className="font-medium mr-2">★ {review.rating ?? '—'}</span>
-                      <span className="italic">“{review.text}”</span>
-                      <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 uppercase">AI: {review.sentiment}</span>
-                      {review.translation_en && review.translation_en !== review.text && (
-                        <p className="mt-2 text-xs text-yellow-900 dark:text-yellow-200">
-                          <span className="font-semibold">English:</span>{' '}
-                          {review.translation_en}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+      {/* Results Section */}
+      <AnimatePresence>
+        {resultData && !isLoading && (
+          <motion.section 
+            key="results"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, type: 'spring' }}
+            className="relative z-10 w-full max-w-[85rem] mt-24 px-4 sm:px-8"
+          >
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-12 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-6 rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg">
+              <div className="text-center sm:text-left">
+                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Analysis Results</h2>
+                <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm font-medium">
+                  {resultData.meta.analyzed_count} reviews analyzed using {resultData.meta.model_id}
+                </p>
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-8 sm:gap-12">
-            <div className="bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-white/50 dark:border-white/5 flex flex-col lg:flex-row gap-10 hover:shadow-2xl hover:border-gray-200/80 dark:hover:border-gray-700 transition-all duration-500">
-              <div className="flex-1 flex flex-col items-center">
-                <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-gray-100">Sentiment Distribution</h3>
-                <div className="w-full h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={110} paddingAngle={4} dataKey="value" label={({ percent = 0 }) => `${(percent * 100).toFixed(0)}%`}>
-                        {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 24px rgb(0 0 0 / 0.12)' }} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              <div className="flex-1 lg:border-l border-t lg:border-t-0 border-gray-100 dark:border-gray-800 pt-8 lg:pt-0 lg:pl-10 flex flex-col justify-center">
-                <h4 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center">
-                  <MessageSquare className="w-5 h-5 mr-2" /> Most frequent words
-                </h4>
-                <div className="flex flex-wrap gap-2.5">
-                  {resultData.keywords.map((keyword) => (
-                    <span key={keyword.text} className="px-4 py-1.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium">
-                      {keyword.text} <span className="text-gray-400 dark:text-gray-500 ml-1">({keyword.value})</span>
-                    </span>
-                  ))}
-                </div>
-
-                {resultData.keyword_groups && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-10">
-                    <KeywordGroup title="Praise" color="text-google-green" items={resultData.keyword_groups.positive} />
-                    <KeywordGroup title="Complaints" color="text-google-red" items={resultData.keyword_groups.negative} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <ReviewCard title="Top Positive Reviews" color="text-google-green" icon={<ThumbsUp className="w-6 h-6 mr-3" />} reviews={topBottomReviews.top} />
-              <ReviewCard title="Top Complaints (Negative)" color="text-google-red" icon={<ThumbsDown className="w-6 h-6 mr-3" />} reviews={topBottomReviews.bottom} />
-            </div>
-          </div>
-        </section>
-      )}
-    </main>
-  )
-}
-
-function PlacePreview({ place }: { place: PlaceDetails }) {
-  const [imageFailed, setImageFailed] = useState(false)
-  useEffect(() => setImageFailed(false), [place.photo_url])
-  const showPhoto = Boolean(place.photo_url) && !imageFailed
-  const hasCoordinates =
-    typeof place.latitude === 'number' &&
-    Number.isFinite(place.latitude) &&
-    typeof place.longitude === 'number' &&
-    Number.isFinite(place.longitude)
-  const mapPreviewUrl = hasCoordinates
-    ? `https://www.openstreetmap.org/export/embed.html?${new URLSearchParams({
-        bbox: [
-          (place.longitude as number) - 0.004,
-          (place.latitude as number) - 0.003,
-          (place.longitude as number) + 0.004,
-          (place.latitude as number) + 0.003,
-        ].join(','),
-        layer: 'mapnik',
-        marker: `${place.latitude},${place.longitude}`,
-      }).toString()}`
-    : ''
-
-  return (
-    <article className="mt-8 overflow-hidden bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-md border border-gray-200 dark:border-gray-800 rounded-[2rem] shadow-lg shadow-gray-200/40 dark:shadow-black/20 max-w-2xl w-full mx-auto hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-      <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr]">
-        <div className="h-48 sm:h-full min-h-48 bg-gray-100 dark:bg-gray-800 relative">
-          {showPhoto ? (
-            <img
-              src={place.photo_url ?? ''}
-              alt={`Photo of ${place.display_name}`}
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={() => setImageFailed(true)}
-            />
-          ) : hasCoordinates ? (
-            <iframe
-              src={mapPreviewUrl}
-              title={`Map of ${place.display_name}`}
-              className="absolute inset-0 w-full h-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-gray-400">
-              <ImageOff className="w-8 h-8 mb-2 opacity-50" />
-              <span className="text-sm font-medium">Photo unavailable</span>
-            </div>
-          )}
-        </div>
-        <div className="p-6 min-w-0 flex flex-col justify-center">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
-                {place.display_name}
-              </p>
-              {place.primary_type && (
-                <p className="text-sm font-medium text-google-blue mt-1 uppercase tracking-wide">{place.primary_type}</p>
-              )}
-            </div>
-            {(place.map_uri || place.google_maps_uri) && (
-              <a
-                href={place.map_uri || place.google_maps_uri}
-                target="_blank"
-                rel="noreferrer"
-                className="text-gray-400 hover:text-google-blue shrink-0 p-2 -mr-2 -mt-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                aria-label={`Open place in ${place.map_provider}`}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={clearResults}
+                className="mt-6 sm:mt-0 flex items-center px-8 py-3 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold rounded-full shadow-md border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all"
               >
-                <ExternalLink className="w-5 h-5" />
-              </a>
+                Clear Results
+              </motion.button>
+            </div>
+
+            {resultData.anomalies.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="mb-10 bg-yellow-50/90 dark:bg-yellow-900/30 backdrop-blur-xl border border-yellow-200/50 dark:border-yellow-700/50 rounded-3xl p-6 sm:p-8 flex items-start shadow-xl shadow-yellow-500/5"
+              >
+                <ShieldAlert className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mr-5 shrink-0 mt-1 drop-shadow-sm" />
+                <div className="min-w-0">
+                  <h3 className="text-lg font-extrabold text-yellow-900 dark:text-yellow-300 tracking-tight">Potential Rating Anomalies ({resultData.anomalies.length})</h3>
+                  <p className="text-yellow-700 dark:text-yellow-500 text-sm mt-1.5 font-medium">The star rating conflicts with the text sentiment. This is an AI indicator, not definitive proof of spam.</p>
+                  <div className="mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {resultData.anomalies.slice(0, 3).map((review) => (
+                      <div key={review.review_id ?? `${review.text}-${review.date}`} className="text-sm bg-white/80 dark:bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-yellow-100 dark:border-yellow-800/50 shadow-sm">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-extrabold text-yellow-600">★ {review.rating ?? '—'}</span>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 uppercase tracking-widest">AI: {review.sentiment}</span>
+                        </div>
+                        <span className="italic font-medium text-gray-700 dark:text-gray-300">“{review.text}”</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
             )}
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 leading-relaxed">
-            {place.formatted_address}
-          </p>
-          {showPhoto && place.photo_attributions.length > 0 && (
-            <p className="text-xs text-gray-400 mt-4 border-t border-gray-100 dark:border-gray-800 pt-3">
-              Photo by{' '}
-              {place.photo_attributions.map((attribution, index) => (
-                <span key={`${attribution.display_name}-${index}`}>
-                  {index > 0 && ', '}
-                  {attribution.uri ? (
-                    <a
-                      href={attribution.uri}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:text-google-blue font-medium transition-colors"
-                    >
-                      {attribution.display_name}
-                    </a>
-                  ) : (
-                    <span className="font-medium">{attribution.display_name}</span>
-                  )}
-                  {attribution.license && (
-                    <>
-                      {' · '}
-                      {attribution.license_uri ? (
-                        <a
-                          href={attribution.license_uri}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:text-google-blue transition-colors"
-                        >
-                          {attribution.license}
-                        </a>
-                      ) : (
-                        attribution.license
-                      )}
-                    </>
-                  )}
-                </span>
-              ))}
-            </p>
-          )}
-          {place.data_attribution && (
-            <p className="text-xs text-gray-400 mt-2">{place.data_attribution}</p>
-          )}
-        </div>
-      </div>
-    </article>
-  )
-}
 
-function KeywordGroup({ title, color, items }: { title: string; color: string; items: Keyword[] }) {
-  return (
-    <div>
-      <p className={`text-sm font-bold uppercase tracking-wider mb-3 ${color}`}>{title}</p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-        {items.length > 0 ? items.map((item) => item.text).join(', ') : 'No data yet'}
-      </p>
-    </div>
-  )
-}
+            <div className="flex flex-col gap-10">
+              <SentimentChart resultData={resultData} />
 
-function ReviewCard({ title, color, icon, reviews }: { title: string; color: string; icon: ReactNode; reviews: Review[] }) {
-  return (
-    <article className="bg-white/90 dark:bg-google-darkSurface/90 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/20 border border-white/50 dark:border-white/5 h-full hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
-      <h3 className={`text-2xl font-bold mb-8 flex items-center ${color}`}>{icon}{title}</h3>
-      {reviews.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400">No reviews in this category.</p>
-      ) : (
-        <div className="space-y-8">
-          {reviews.map((review, i) => (
-            <div key={review.review_id ?? `${review.text}-${review.date}`} className={`pb-8 ${i !== reviews.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-yellow-500 text-lg tracking-widest">{renderStars(review.rating)}</span>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide ${review.sentiment === 'Positive' ? 'text-google-green bg-green-50 dark:bg-green-900/30' : 'text-google-red bg-red-50 dark:bg-red-900/30'}`}>
-                    {(review.confidence * 100).toFixed(0)}% confidence
-                  </span>
-                </div>
-                {review.author && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                    <span className="text-gray-700 dark:text-gray-300">{review.author}</span>
-                    {review.date && <span> · {formatReviewDate(review.date)}</span>}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-4">
-                <div>
-                  {review.translation_en && review.translation_en !== review.text && (
-                    <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-                      Original review
-                    </p>
-                  )}
-                  <p className="text-gray-800 dark:text-gray-200 text-base leading-relaxed break-words font-medium">
-                    “{review.text}”
-                  </p>
-                </div>
-                {review.translation_en && review.translation_en !== review.text && (
-                  <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 p-5 mt-4">
-                    <p className="text-xs font-bold uppercase tracking-wider text-google-blue mb-2">
-                      English translation
-                    </p>
-                    <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed break-words font-medium">
-                      {review.translation_en}
-                    </p>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                <ReviewCard title="Top Positive" color="text-google-green" icon={<ThumbsUp className="w-7 h-7 mr-3 drop-shadow-sm" />} reviews={topBottomReviews.top} />
+                <ReviewCard title="Top Complaints" color="text-google-red" icon={<ThumbsDown className="w-7 h-7 mr-3 drop-shadow-sm" />} reviews={topBottomReviews.bottom} />
               </div>
             </div>
-          ))}
-        </div>
-      )}
-    </article>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </main>
   )
 }
 
