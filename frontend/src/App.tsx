@@ -310,13 +310,15 @@ function App() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, type: 'spring' }}
-          className="text-5xl sm:text-7xl font-black mb-6 text-center tracking-tighter drop-shadow-sm"
+          className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 text-center tracking-tighter drop-shadow-sm flex flex-wrap justify-center gap-x-2"
         >
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">Geo</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-red to-red-400">Sen</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-yellow to-yellow-400">ti</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">ment</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-green to-green-400 ml-2">Analyzer</span>
+          <span className="whitespace-nowrap">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">Geo</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-red to-red-400">Sen</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-yellow to-yellow-400">ti</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">ment</span>
+          </span>
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-green to-green-400">Analyzer</span>
         </motion.h1>
 
         <SearchBar 
@@ -413,10 +415,10 @@ function App() {
         {resultData && !isLoading && (
           <motion.section 
             key="results"
-            initial={{ opacity: 0, y: 40 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, type: 'spring' }}
-            className="relative z-10 w-full max-w-[85rem] mt-24 px-4 sm:px-8"
+            transition={{ duration: 0.8, delay: 0.2, type: 'spring' }}
+            className="relative z-10 w-full max-w-[85rem] mt-12 sm:mt-24 px-4 sm:px-8 mb-24"
           >
             <div className="flex flex-col sm:flex-row items-center justify-between mb-12 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-6 rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg">
               <div className="text-center sm:text-left">

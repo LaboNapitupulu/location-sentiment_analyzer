@@ -63,7 +63,7 @@ export function ReviewCard({ title, color, icon, reviews }: { title: string; col
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-      className="bg-white/70 dark:bg-black/40 backdrop-blur-2xl p-8 sm:p-10 rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/40 border border-white/50 dark:border-white/10 h-full hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden group"
+      className="bg-white/70 dark:bg-black/40 backdrop-blur-2xl p-6 sm:p-8 lg:p-10 rounded-3xl sm:rounded-[2.5rem] shadow-xl shadow-gray-200/50 dark:shadow-black/40 border border-white/40 dark:border-white/10 h-full hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 relative overflow-hidden group"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent dark:from-white/5 pointer-events-none" />
       

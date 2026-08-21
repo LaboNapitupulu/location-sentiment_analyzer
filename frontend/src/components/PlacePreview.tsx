@@ -87,7 +87,7 @@ export function PlacePreview({ place }: { place: PlaceDetails }) {
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={{ rotateX, rotateY }}
-        className="overflow-hidden bg-white/70 dark:bg-black/60 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2rem] shadow-2xl shadow-gray-300/40 dark:shadow-black/40 w-full relative group"
+        className="bg-white/80 dark:bg-black/50 backdrop-blur-2xl rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 lg:p-10 shadow-2xl border border-white/50 dark:border-white/10 relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 pointer-events-none rounded-[2rem]" />
         

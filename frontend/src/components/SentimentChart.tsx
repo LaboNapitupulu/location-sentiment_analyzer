@@ -53,7 +53,7 @@ export function SentimentChart({ resultData }: SentimentChartProps) {
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={{ rotateX, rotateY }}
-        className="bg-white/80 dark:bg-black/50 backdrop-blur-2xl p-8 sm:p-12 rounded-[2.5rem] shadow-2xl shadow-gray-300/30 dark:shadow-black/50 border border-white/60 dark:border-white/10 flex flex-col lg:flex-row gap-10 hover:border-gray-200/80 dark:hover:border-gray-700 transition-colors duration-500 relative"
+        className="bg-white/80 dark:bg-black/50 backdrop-blur-2xl p-6 sm:p-8 md:p-12 rounded-3xl sm:rounded-[2.5rem] shadow-2xl border border-white/50 dark:border-white/10 flex flex-col lg:flex-row gap-10 min-h-[400px] relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent dark:from-white/5 pointer-events-none rounded-[2.5rem]" />
         
