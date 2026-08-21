@@ -21,7 +21,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Roboto', 'sans-serif'],
+        sans: ['Outfit', 'sans-serif'],
       }
     },
   },
