@@ -151,8 +151,9 @@ class NLPAnalyzer:
                     ordered_results[index] = result
 
             if groups["multilingual"]:
-                multilingual_pipeline = self._multilingual_pipeline
-                if not self.initialize_multilingual_model():
+                if self.initialize_multilingual_model():
+                    multilingual_pipeline = self._multilingual_pipeline
+                else:
                     multilingual_pipeline = self._pipeline
                     self.last_multilingual_fallback_count = len(groups["multilingual"])
                 multilingual_results = self._run_pipeline(

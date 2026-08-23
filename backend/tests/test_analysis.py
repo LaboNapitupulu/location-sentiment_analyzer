@@ -87,6 +87,29 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual([result["label"] for result in results], ["negative", "LABEL_0"])
         self.assertEqual(analyzer.last_language_counts, {"id": 1, "multilingual": 1})
 
+    def test_analyzer_uses_multilingual_pipeline_after_lazy_initialization(self) -> None:
+        analyzer = NLPAnalyzer()
+        analyzer._pipeline = lambda texts, **_: [
+            {"label": "LABEL_0", "score": 0.9} for _ in texts
+        ]
+        analyzer.is_ready = True
+
+        multilingual_pipeline = lambda texts, **_: [
+            {"label": "positive", "score": 0.95} for _ in texts
+        ]
+
+        def initialize_multilingual_model() -> bool:
+            analyzer._multilingual_pipeline = multilingual_pipeline
+            analyzer.is_multilingual_ready = True
+            return True
+
+        analyzer.initialize_multilingual_model = initialize_multilingual_model
+
+        results = analyzer.analyze_batch(["The service was excellent"])
+
+        self.assertEqual(results, [{"label": "positive", "score": 0.95}])
+        self.assertEqual(analyzer.last_multilingual_fallback_count, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
