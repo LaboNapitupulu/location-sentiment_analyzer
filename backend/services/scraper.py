@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import re
 import traceback
 import urllib.parse
@@ -92,6 +93,22 @@ class ScrapeTarget:
     original: str
     url: str
     kind: str
+
+
+def review_identity(review: dict[str, Any]) -> str:
+    """Return a stable identity even when Google omits data-review-id."""
+    review_id = str(review.get("review_id") or "").strip()
+    if review_id:
+        return review_id
+
+    parts = (
+        str(review.get("author") or "").strip().casefold(),
+        str(review.get("date") or "").strip().casefold(),
+        str(review.get("rating") or "").strip(),
+        " ".join(str(review.get("text") or "").split()).casefold(),
+    )
+    digest = hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()
+    return f"generated-{digest[:24]}"
 
 
 def _is_google_host(hostname: str) -> bool:
@@ -704,7 +721,7 @@ _EXTRACT_REVIEWS_JS = """
         const idElement = block.matches("[data-review-id]")
             ? block
             : block.querySelector("[data-review-id]");
-        const reviewId = idElement?.getAttribute("data-review-id") || Math.random().toString(36).substring(7);
+        const reviewId = idElement?.getAttribute("data-review-id") || null;
 
         results.push({
             review_id: reviewId,
@@ -913,16 +930,11 @@ async def _run_scraper(
 
             new_count = 0
             for review in extracted:
-                key = review.get("review_id") or "|".join(
-                    [
-                        review.get("author", ""),
-                        review.get("date", ""),
-                        review.get("text", ""),
-                    ]
-                )
+                key = review_identity(review)
                 if key in seen_keys:
                     continue
                 seen_keys.add(key)
+                review["review_id"] = key
                 reviews.append(review)
                 new_count += 1
                 if len(reviews) >= max_reviews:

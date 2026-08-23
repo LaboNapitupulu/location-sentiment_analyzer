@@ -64,7 +64,7 @@ async def check_api(location: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("location", help="Nama lokasi atau tautan Google Maps")
+    parser.add_argument("location", help="Tautan resmi tempat di Google Maps")
     args = parser.parse_args()
     return asyncio.run(check_api(args.location))
 

@@ -45,6 +45,14 @@ class InMemoryRateLimiter:
         now = time.monotonic()
         cutoff = now - self.window_seconds
         async with self._lock:
+            if len(self._requests) > 1_000:
+                stale_keys = [
+                    request_key
+                    for request_key, timestamps in self._requests.items()
+                    if not timestamps or timestamps[-1] < cutoff
+                ]
+                for stale_key in stale_keys:
+                    self._requests.pop(stale_key, None)
             entries = self._requests[key]
             while entries and entries[0] < cutoff:
                 entries.popleft()
@@ -59,6 +67,10 @@ async def lifespan(app: FastAPI):
     app.state.job_semaphore = asyncio.Semaphore(settings.max_concurrent_jobs)
     app.state.rate_limiter = InMemoryRateLimiter(
         settings.rate_limit_requests,
+        settings.rate_limit_window_seconds,
+    )
+    app.state.places_rate_limiter = InMemoryRateLimiter(
+        settings.places_rate_limit_requests,
         settings.rate_limit_window_seconds,
     )
     await asyncio.to_thread(nlp_analyzer.initialize_model)
@@ -76,7 +88,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=list(settings.cors_origins),
     allow_credentials=False,
     allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
@@ -85,6 +97,18 @@ app.add_middleware(
 
 def _event(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def _client_key(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+async def _enforce_places_rate_limit(request: Request) -> None:
+    if not await app.state.places_rate_limiter.allow(_client_key(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Terlalu banyak permintaan pencarian lokasi. Coba lagi sebentar.",
+        )
 
 
 @app.get("/")
@@ -98,6 +122,8 @@ async def health() -> dict:
         "status": "ready" if nlp_analyzer.is_ready else "degraded",
         "model_ready": nlp_analyzer.is_ready,
         "model_id": settings.model_id,
+        "multilingual_model_ready": nlp_analyzer.is_multilingual_ready,
+        "multilingual_model_id": settings.multilingual_model_id,
         "translation_ready": english_translator.is_ready,
         "translation_model_id": settings.translation_model_id,
         "max_concurrent_jobs": settings.max_concurrent_jobs,
@@ -110,9 +136,11 @@ async def health() -> dict:
 
 @app.get("/api/places/autocomplete")
 async def places_autocomplete(
+    request: Request,
     query: str = Query(alias="q", min_length=3, max_length=160),
     session_token: str | None = Query(default=None, max_length=36),
 ) -> dict:
+    await _enforce_places_rate_limit(request)
     if query.lstrip().lower().startswith(("http://", "https://", "www.")):
         return {
             "configured": True,
@@ -141,6 +169,7 @@ async def places_autocomplete(
 
 @app.get("/api/places/details/{place_id}")
 async def place_details(
+    request: Request,
     place_id: str,
     session_token: str | None = Query(default=None, max_length=36),
     latitude: float | None = Query(default=None, alias="lat", ge=-90, le=90),
@@ -148,6 +177,7 @@ async def place_details(
     place_name: str = Query(default="", alias="name", max_length=160),
     address: str = Query(default="", max_length=300),
 ) -> dict:
+    await _enforce_places_rate_limit(request)
     try:
         if place_id.startswith("osm-"):
             return await get_free_place_details(
@@ -183,9 +213,11 @@ async def place_details(
 
 @app.get("/api/places/photo", name="place_photo")
 async def place_photo(
+    request: Request,
     name: str = Query(min_length=10, max_length=1400),
     max_width: int = Query(default=1200, ge=100, le=1600),
 ) -> Response:
+    await _enforce_places_rate_limit(request)
     if not settings.google_maps_api_key:
         raise HTTPException(status_code=503, detail="Places API belum dikonfigurasi.")
     try:
@@ -212,7 +244,7 @@ async def analyze_url(
     except InvalidMapsInput as exc:
         validation_error = str(exc)
 
-    client_key = request.client.host if request.client else "unknown"
+    client_key = _client_key(request)
     if not await app.state.rate_limiter.allow(client_key):
         raise HTTPException(
             status_code=429,
@@ -364,6 +396,7 @@ async def analyze_url(
                         "progress": 90,
                     }
                 )
+                translated_review_count = 0
                 if not english_translator.is_ready:
                     await asyncio.to_thread(english_translator.initialize_model)
                 if english_translator.is_ready:
@@ -381,6 +414,8 @@ async def analyze_url(
                             strict=True,
                         ):
                             review["translation_en"] = translation
+                            if translation.strip() and translation.strip() != str(review["text"]).strip():
+                                translated_review_count += 1
                     except Exception as exc:
                         print(f"English translation failed: {type(exc).__name__}: {exc}")
                         yield _event(
@@ -442,8 +477,13 @@ async def analyze_url(
                         "analyzed_count": len(reviews_data),
                         "requested_count": settings.max_reviews,
                         "model_id": settings.model_id,
+                        "multilingual_model_id": settings.multilingual_model_id,
+                        "language_counts": nlp_analyzer.last_language_counts,
+                        "multilingual_fallback_count": (
+                            nlp_analyzer.last_multilingual_fallback_count
+                        ),
                         "translation_model_id": settings.translation_model_id,
-                        "translated_review_count": len(unique_display_reviews),
+                        "translated_review_count": translated_review_count,
                         "source": "Google Maps",
                         "stateless": True,
                     },

@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from config import settings
-from services.places import PlacesAPIError
+from services.places import PlacesAPIError, google_maps_search_url
 
 
 PHOTON_URL = "https://photon.komoot.io/api"
@@ -383,7 +383,7 @@ async def get_free_place_details(
         "primary_type": primary_type,
         "map_uri": f"https://www.openstreetmap.org/{type_name}/{osm_id}",
         "map_provider": "OpenStreetMap",
-        "analysis_value": _join_unique([display_name, address]),
+        "analysis_value": google_maps_search_url(display_name, address),
         "photo_url": None,
         "photo_attributions": [],
         "provider": "openstreetmap",

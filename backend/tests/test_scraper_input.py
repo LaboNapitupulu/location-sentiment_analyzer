@@ -1,6 +1,6 @@
 import unittest
 
-from services.scraper import InvalidMapsInput, build_scrape_target
+from services.scraper import InvalidMapsInput, build_scrape_target, review_identity
 
 
 class ScrapeTargetTests(unittest.TestCase):
@@ -32,6 +32,25 @@ class ScrapeTargetTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(InvalidMapsInput):
                     build_scrape_target(value)
+
+    def test_generated_review_identity_is_stable(self) -> None:
+        review = {
+            "review_id": None,
+            "author": "A***",
+            "date": "2 hari lalu",
+            "rating": 4,
+            "text": "  Tempat   sangat nyaman. ",
+        }
+        first = review_identity(review)
+        second = review_identity({**review, "text": "tempat sangat nyaman."})
+        self.assertEqual(first, second)
+        self.assertTrue(first.startswith("generated-"))
+
+    def test_google_review_id_takes_precedence(self) -> None:
+        self.assertEqual(
+            review_identity({"review_id": "google-review-123", "text": "Review"}),
+            "google-review-123",
+        )
 
 
 if __name__ == "__main__":

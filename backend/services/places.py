@@ -19,6 +19,14 @@ class PlacesAPIError(RuntimeError):
     pass
 
 
+def google_maps_search_url(*parts: str) -> str:
+    query = ", ".join(part.strip() for part in parts if part and part.strip())
+    return (
+        "https://www.google.com/maps/search/?api=1&"
+        + urllib.parse.urlencode({"query": query})
+    )
+
+
 def _headers(field_mask: str) -> dict[str, str]:
     if not settings.google_maps_api_key:
         raise PlacesAPIError("Google Places API belum dikonfigurasi.")
@@ -182,6 +190,8 @@ async def get_place_details(
 
     display_name = str((payload.get("displayName") or {}).get("text") or "")
     address = str(payload.get("formattedAddress") or "")
+    google_maps_uri = str(payload.get("googleMapsUri") or "")
+    analysis_value = google_maps_uri or google_maps_search_url(display_name, address)
     primary_type = str(
         (payload.get("primaryTypeDisplayName") or {}).get("text") or ""
     )
@@ -190,10 +200,8 @@ async def get_place_details(
         "display_name": display_name,
         "formatted_address": address,
         "primary_type": primary_type,
-        "google_maps_uri": str(payload.get("googleMapsUri") or ""),
-        "analysis_value": ", ".join(
-            part for part in (display_name, address) if part
-        ),
+        "google_maps_uri": google_maps_uri,
+        "analysis_value": analysis_value,
         "photo_name": str(photo.get("name")) if photo else None,
         "photo_attributions": attributions,
     }

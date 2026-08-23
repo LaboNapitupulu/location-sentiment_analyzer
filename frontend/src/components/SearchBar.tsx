@@ -3,15 +3,38 @@ import { MapPin, LoaderCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 
+export type PlaceSuggestion = {
+  place_id: string
+  text: string
+  main_text: string
+  secondary_text: string
+  latitude?: number
+  longitude?: number
+}
+
 type SearchBarProps = {
   input: string
   setInput: (value: string) => void
   isLoading: boolean
   startAnalysis: (e: FormEvent) => void
   cancelAnalysis: () => void
+  suggestions: PlaceSuggestion[]
+  suggestionsLoading: boolean
+  suggestionsError: string
+  selectSuggestion: (suggestion: PlaceSuggestion) => void
 }
 
-export function SearchBar({ input, setInput, isLoading, startAnalysis, cancelAnalysis }: SearchBarProps) {
+export function SearchBar({
+  input,
+  setInput,
+  isLoading,
+  startAnalysis,
+  cancelAnalysis,
+  suggestions,
+  suggestionsLoading,
+  suggestionsError,
+  selectSuggestion,
+}: SearchBarProps) {
   return (
     <form className="w-full relative z-10" onSubmit={startAnalysis}>
       <label htmlFor="location-input" className="sr-only">
@@ -62,8 +85,48 @@ export function SearchBar({ input, setInput, isLoading, startAnalysis, cancelAna
         <div className="absolute -inset-1 bg-gradient-to-r from-google-blue via-google-red to-google-yellow rounded-2xl blur-lg opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200 -z-10" />
       </motion.div>
 
+      {!isLoading && (suggestionsLoading || suggestions.length > 0 || suggestionsError) && (
+        <div className="mt-3 overflow-hidden rounded-2xl border border-white/50 bg-white/95 text-left shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-gray-950/95">
+          {suggestionsLoading && (
+            <p className="flex items-center gap-2 px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Searching places…
+            </p>
+          )}
+          {!suggestionsLoading && suggestionsError && (
+            <p className="px-5 py-4 text-sm text-red-600 dark:text-red-400">{suggestionsError}</p>
+          )}
+          {!suggestionsLoading && suggestions.length > 0 && (
+            <ul role="listbox" aria-label="Place suggestions" className="divide-y divide-gray-100 dark:divide-gray-800">
+              {suggestions.map((suggestion) => (
+                <li key={suggestion.place_id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected="false"
+                    onClick={() => selectSuggestion(suggestion)}
+                    className="flex w-full items-start gap-3 px-5 py-4 text-left transition-colors hover:bg-blue-50 focus:bg-blue-50 focus:outline-none dark:hover:bg-blue-950/40 dark:focus:bg-blue-950/40"
+                  >
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-google-blue" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-gray-900 dark:text-gray-100">
+                        {suggestion.main_text}
+                      </span>
+                      {suggestion.secondary_text && (
+                        <span className="mt-0.5 block truncate text-xs text-gray-500 dark:text-gray-400">
+                          {suggestion.secondary_text}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <p className="mt-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center font-medium">
-        In Google Maps, select a place → Share → Copy link, then paste it here.
+        Search for a place and choose a suggestion, or paste its Google Maps link.
       </p>
 
       <motion.div 

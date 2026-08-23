@@ -61,6 +61,7 @@ class Settings:
     max_concurrent_jobs: int = _as_int("MAX_CONCURRENT_JOBS", 1)
     rate_limit_requests: int = _as_int("RATE_LIMIT_REQUESTS", 5)
     rate_limit_window_seconds: int = _as_int("RATE_LIMIT_WINDOW_SECONDS", 60)
+    places_rate_limit_requests: int = _as_int("PLACES_RATE_LIMIT_REQUESTS", 60)
     playwright_headless: bool = _as_bool("PLAYWRIGHT_HEADLESS", True)
     disable_browser_sandbox: bool = _as_bool("PLAYWRIGHT_DISABLE_SANDBOX", False)
     scraper_debug: bool = _as_bool("SCRAPER_DEBUG", False)
@@ -72,6 +73,13 @@ class Settings:
     )
     model_revision: str | None = os.getenv("SENTIMENT_MODEL_REVISION") or None
     model_batch_size: int = _as_int("MODEL_BATCH_SIZE", 8)
+    multilingual_model_id: str = os.getenv(
+        "MULTILINGUAL_SENTIMENT_MODEL_ID",
+        "cardiffnlp/twitter-xlm-roberta-base-sentiment",
+    )
+    multilingual_model_revision: str | None = (
+        os.getenv("MULTILINGUAL_SENTIMENT_MODEL_REVISION") or None
+    )
     translation_model_id: str = os.getenv(
         "TRANSLATION_MODEL_ID",
         "Helsinki-NLP/opus-mt-id-en",

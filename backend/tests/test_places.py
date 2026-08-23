@@ -3,6 +3,7 @@ import unittest
 from services.places import (
     PHOTO_NAME_PATTERN,
     SESSION_TOKEN_PATTERN,
+    google_maps_search_url,
     parse_autocomplete_response,
 )
 
@@ -60,6 +61,11 @@ class PlacesTests(unittest.TestCase):
             SESSION_TOKEN_PATTERN.fullmatch("550e8400-e29b-41d4-a716-446655440000")
         )
         self.assertIsNone(SESSION_TOKEN_PATTERN.fullmatch("token with spaces"))
+
+    def test_google_maps_search_url_is_analyzable(self) -> None:
+        url = google_maps_search_url("Plaza Indonesia", "Jakarta")
+        self.assertTrue(url.startswith("https://www.google.com/maps/search/"))
+        self.assertIn("query=Plaza+Indonesia%2C+Jakarta", url)
 
 
 if __name__ == "__main__":

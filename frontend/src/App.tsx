@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 import { DynamicBackground } from './components/DynamicBackground'
 import { SearchBar } from './components/SearchBar'
+import type { PlaceSuggestion } from './components/SearchBar'
 import { PlacePreview, type PlaceDetails } from './components/PlacePreview'
 import { SentimentChart } from './components/SentimentChart'
 import { ReviewCard, type Review, type Sentiment } from './components/ReviewCard'
@@ -63,10 +64,14 @@ function isResultData(value: StreamMessage): value is StreamMessage & ResultData
   )
 }
 
-const buildAnalyzeUrl = (input: string) => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://condiment-vexingly-moaner.ngrok-free.dev'
-  return `${baseUrl}/api/analyze?url=${encodeURIComponent(input)}`
-}
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
+const apiUrl = (path: string) => `${API_BASE_URL}${path}`
+const apiHeaders = API_BASE_URL.includes('.ngrok')
+  ? { 'ngrok-skip-browser-warning': 'true' }
+  : undefined
+
+const buildAnalyzeUrl = (input: string) =>
+  apiUrl(`/api/analyze?url=${encodeURIComponent(input)}`)
 
 function isMapsUrl(value: string): boolean {
   let candidate = value.trim()
@@ -114,8 +119,13 @@ function App() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [resultData, setResultData] = useState<ResultData | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null)
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [suggestionsError, setSuggestionsError] = useState('')
 
   const abortControllerRef = useRef<AbortController | null>(null)
+  const placesAbortControllerRef = useRef<AbortController | null>(null)
+  const placesSessionTokenRef = useRef(crypto.randomUUID())
   const isFinishedRef = useRef(false)
 
   useEffect(() => {
@@ -130,8 +140,84 @@ function App() {
   }, [isLoading])
 
   useEffect(() => {
-    return () => abortControllerRef.current?.abort()
+    return () => {
+      abortControllerRef.current?.abort()
+      placesAbortControllerRef.current?.abort()
+    }
   }, [])
+
+  useEffect(() => {
+    const query = input.trim()
+    placesAbortControllerRef.current?.abort()
+    setSuggestionsError('')
+    if (isLoading || query.length < 3 || isMapsUrl(query)) {
+      setSuggestions([])
+      setSuggestionsLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    placesAbortControllerRef.current = controller
+    const timer = window.setTimeout(async () => {
+      setSuggestionsLoading(true)
+      try {
+        const params = new URLSearchParams({
+          q: query,
+          session_token: placesSessionTokenRef.current,
+        })
+        const response = await fetch(apiUrl(`/api/places/autocomplete?${params}`), {
+          headers: apiHeaders,
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('Place search failed')
+        const payload = await response.json() as { suggestions?: PlaceSuggestion[] }
+        setSuggestions(Array.isArray(payload.suggestions) ? payload.suggestions : [])
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setSuggestions([])
+        setSuggestionsError('Place search is temporarily unavailable. You can still paste a Google Maps link.')
+      } finally {
+        if (!controller.signal.aborted) setSuggestionsLoading(false)
+      }
+    }, 350)
+
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [input, isLoading])
+
+  const selectSuggestion = async (suggestion: PlaceSuggestion) => {
+    placesAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    placesAbortControllerRef.current = controller
+    setSuggestions([])
+    setSuggestionsLoading(true)
+    setSuggestionsError('')
+    try {
+      const params = new URLSearchParams({
+        session_token: placesSessionTokenRef.current,
+        name: suggestion.main_text,
+        address: suggestion.secondary_text,
+      })
+      if (typeof suggestion.latitude === 'number') params.set('lat', String(suggestion.latitude))
+      if (typeof suggestion.longitude === 'number') params.set('lon', String(suggestion.longitude))
+      const response = await fetch(
+        apiUrl(`/api/places/details/${encodeURIComponent(suggestion.place_id)}?${params}`),
+        { headers: apiHeaders, signal: controller.signal },
+      )
+      if (!response.ok) throw new Error('Place details failed')
+      const place = await response.json() as PlaceDetails
+      setSelectedPlace(place)
+      setInput(place.analysis_value)
+      placesSessionTokenRef.current = crypto.randomUUID()
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      setSuggestionsError('Place details could not be loaded. Try pasting its Google Maps link instead.')
+    } finally {
+      if (!controller.signal.aborted) setSuggestionsLoading(false)
+    }
+  }
 
   const estimatedRemaining = useMemo(() => {
     if (!isLoading || progress < 5 || progress >= 100 || elapsedSeconds < 2) return null
@@ -167,7 +253,7 @@ function App() {
     const trimmedInput = input.trim()
     if (!trimmedInput || isLoading) return
     if (!isMapsUrl(trimmedInput)) {
-      setErrorMsg('Paste an official Google Maps place link, such as https://maps.app.goo.gl/...')
+      setErrorMsg('Choose a place suggestion or paste an official Google Maps place link.')
       setSelectedPlace(null)
       return
     }
@@ -188,9 +274,7 @@ function App() {
     abortControllerRef.current = abortController
 
     fetch(buildAnalyzeUrl(trimmedInput), {
-      headers: {
-        'ngrok-skip-browser-warning': 'true'
-      },
+      headers: apiHeaders,
       signal: abortController.signal
     }).then(async (response) => {
       if (!response.ok) throw new Error('Network error')
@@ -327,6 +411,10 @@ function App() {
           isLoading={isLoading} 
           startAnalysis={startAnalysis} 
           cancelAnalysis={cancelAnalysis} 
+          suggestions={suggestions}
+          suggestionsLoading={suggestionsLoading}
+          suggestionsError={suggestionsError}
+          selectSuggestion={selectSuggestion}
         />
 
         <AnimatePresence mode="popLayout">
