@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { MapPin, LoaderCircle, Search, X, Sparkles, Compass } from 'lucide-react'
+import { MapPin, LoaderCircle, Search, X, Compass } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../lib/utils'
 

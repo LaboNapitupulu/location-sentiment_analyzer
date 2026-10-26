@@ -9,9 +9,7 @@ import {
   Copy, 
   Check, 
   Languages, 
-  ChevronDown, 
-  Sparkles,
-  ArrowUpDown
+  ChevronDown
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '../lib/utils'

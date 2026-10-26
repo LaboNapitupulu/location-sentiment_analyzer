@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { MessageSquare, ThumbsUp, ThumbsDown, Filter } from 'lucide-react'
-import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 import type { ResultData, Keyword } from '../App'
 

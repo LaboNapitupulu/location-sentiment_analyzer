@@ -10,7 +10,6 @@ import {
   Layers, 
   AlertTriangle 
 } from 'lucide-react'
-import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 import type { ResultData } from '../App'
 import type { PlaceDetails } from './PlacePreview'
