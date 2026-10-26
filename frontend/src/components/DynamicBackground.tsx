@@ -1,62 +1,20 @@
-import { motion } from 'framer-motion'
-
 export function DynamicBackground() {
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      <motion.div
-        className="absolute -top-[20%] -right-[10%] w-[50%] h-[50%] bg-google-blue/20 dark:bg-google-blue/10 rounded-full blur-[120px]"
-        animate={{
-          scale: [1, 1.2, 1],
-          x: [0, -50, 0],
-          y: [0, 50, 0],
-        }}
-        transition={{
-          duration: 15,
-          repeat: Infinity,
-          ease: 'easeInOut',
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 select-none">
+      {/* Subtle geospatial dot grid overlay */}
+      <div 
+        className="absolute inset-0 opacity-[0.45] dark:opacity-[0.25]"
+        style={{
+          backgroundImage: `radial-gradient(currentColor 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          color: '#94a3b8'
         }}
       />
-      <motion.div
-        className="absolute top-[20%] -left-[10%] w-[40%] h-[40%] bg-google-red/20 dark:bg-google-red/10 rounded-full blur-[100px]"
-        animate={{
-          scale: [1, 1.3, 1],
-          x: [0, 50, 0],
-          y: [0, -30, 0],
-        }}
-        transition={{
-          duration: 18,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-      <motion.div
-        className="absolute -bottom-[10%] left-[20%] w-[60%] h-[60%] bg-google-yellow/15 dark:bg-google-yellow/10 rounded-full blur-[120px]"
-        animate={{
-          scale: [1, 1.1, 1],
-          x: [0, 30, 0],
-          y: [0, -40, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-      
-      {/* Additional subtle orbs for more dynamic feel */}
-      <motion.div
-        className="absolute top-[50%] right-[20%] w-[30%] h-[30%] bg-google-green/10 dark:bg-google-green/5 rounded-full blur-[90px]"
-        animate={{
-          scale: [1, 1.4, 1],
-          x: [0, -40, 0],
-          y: [0, 60, 0],
-        }}
-        transition={{
-          duration: 22,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
+
+      {/* Soft directional ambiance tailored for light and dark modes */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-blue-500/10 via-emerald-500/5 to-transparent dark:from-blue-600/15 dark:via-emerald-500/5 rounded-full blur-3xl" />
+      <div className="absolute top-1/3 -right-40 w-[600px] h-[600px] bg-gradient-to-bl from-indigo-500/5 to-transparent dark:from-indigo-600/10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-40 -left-40 w-[600px] h-[600px] bg-gradient-to-tr from-emerald-500/5 to-transparent dark:from-emerald-600/10 rounded-full blur-3xl" />
     </div>
   )
 }
