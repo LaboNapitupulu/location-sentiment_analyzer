@@ -7,6 +7,7 @@ import { DynamicBackground } from './components/DynamicBackground'
 import { SearchBar } from './components/SearchBar'
 import type { PlaceSuggestion } from './components/SearchBar'
 import { PlacePreview, type PlaceDetails } from './components/PlacePreview'
+import { AnalyticsKPIHeader } from './components/AnalyticsKPIHeader'
 import { SentimentChart } from './components/SentimentChart'
 import { ReviewCard, type Review, type Sentiment } from './components/ReviewCard'
 
@@ -507,22 +508,11 @@ function App() {
             transition={{ duration: 0.8, delay: 0.2, type: 'spring' }}
             className="relative z-10 w-full max-w-[85rem] mt-12 sm:mt-24 px-4 sm:px-8 mb-24"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-12 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-6 rounded-[2rem] border border-white/50 dark:border-white/10 shadow-lg">
-              <div className="text-center sm:text-left">
-                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Analysis Results</h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm font-medium">
-                  {resultData.meta.analyzed_count} reviews analyzed using {resultData.meta.model_id}
-                </p>
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={clearResults}
-                className="mt-6 sm:mt-0 flex items-center px-8 py-3 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-bold rounded-full shadow-md border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all"
-              >
-                Clear Results
-              </motion.button>
-            </div>
+            <AnalyticsKPIHeader 
+              resultData={resultData} 
+              place={selectedPlace} 
+              onClear={clearResults} 
+            />
 
             {resultData.anomalies.length > 0 && (
               <motion.div 
