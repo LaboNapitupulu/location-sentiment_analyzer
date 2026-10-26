@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Clock3, ShieldAlert } from 'lucide-react'
+import { Clock3, ShieldAlert, Sun, Moon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { DynamicBackground } from './components/DynamicBackground'
@@ -353,27 +353,24 @@ function App() {
       <DynamicBackground />
 
       {/* Theme Toggle */}
-      <motion.button
-        whileHover={{ scale: 1.1, rotate: 180 }}
-        whileTap={{ scale: 0.9 }}
-        transition={{ duration: 0.3 }}
+      <button
         type="button"
         onClick={() => setIsDark((value) => !value)}
-        className="absolute top-6 right-6 p-3 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur-md border border-white/50 dark:border-white/10 shadow-lg hover:shadow-xl transition-all z-50"
+        className="absolute top-6 right-6 p-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-subtle hover:shadow-elevated transition-all z-50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
         aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       >
         <AnimatePresence mode="wait">
           {isDark ? (
-            <motion.svg key="sun" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </motion.svg>
+            <motion.div key="sun" initial={{ opacity: 0, rotate: -30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 30 }} transition={{ duration: 0.15 }}>
+              <Sun className="w-5 h-5 text-amber-400" />
+            </motion.div>
           ) : (
-            <motion.svg key="moon" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-            </motion.svg>
+            <motion.div key="moon" initial={{ opacity: 0, rotate: 30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -30 }} transition={{ duration: 0.15 }}>
+              <Moon className="w-5 h-5 text-slate-700" />
+            </motion.div>
           )}
         </AnimatePresence>
-      </motion.button>
+      </button>
 
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4 text-center">
@@ -419,42 +416,42 @@ function App() {
           {isLoading && (
             <motion.div 
               key="loading-status"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-10 w-full max-w-lg bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 p-6 rounded-3xl shadow-xl overflow-hidden relative"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-8 w-full max-w-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl sm:rounded-3xl shadow-elevated dark:shadow-elevated-dark overflow-hidden text-left"
             >
-              {/* Animated scanning line */}
-              <motion.div 
-                className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-google-blue to-transparent"
-                animate={{ y: [0, 150, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              />
-              
-              <div className="flex items-center justify-between text-sm mb-3">
-                <span className="text-google-blue font-bold tracking-wide">{statusText}</span>
-                <span className="text-gray-500 font-bold">{progress}%</span>
+              <div className="flex items-center justify-between text-xs sm:text-sm mb-2.5">
+                <span className="text-slate-800 dark:text-slate-200 font-bold tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                  {statusText || 'Processing location data...'}
+                </span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{progress}%</span>
               </div>
+
               <div
-                className="w-full h-2.5 bg-gray-200/50 dark:bg-gray-800/50 rounded-full overflow-hidden shadow-inner"
+                className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={progress}
               >
                 <motion.div 
-                  className="h-full bg-gradient-to-r from-google-blue via-blue-500 to-cyan-400"
+                  className="h-full bg-gradient-to-r from-blue-600 to-teal-500 dark:from-blue-500 dark:to-teal-400"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  transition={{ ease: "easeOut" }}
+                  transition={{ ease: "easeOut", duration: 0.3 }}
                 />
               </div>
-              <div className="mt-4 flex flex-wrap justify-between gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                 {reviewProgress && reviewProgress.total > 0 && (
-                  <span>Reviews: {reviewProgress.current}/{reviewProgress.total}</span>
+                  <span>Reviews extracted: {reviewProgress.current} / {reviewProgress.total}</span>
                 )}
-                <span className="flex items-center"><Clock3 className="w-3.5 h-3.5 mr-1.5 text-google-blue" /> {elapsedSeconds}s</span>
-                {estimatedRemaining !== null && <span>ETA: {estimatedRemaining}s</span>}
+                <span className="flex items-center gap-1">
+                  <Clock3 className="w-3 h-3 text-blue-500" /> {elapsedSeconds}s elapsed
+                </span>
+                {estimatedRemaining !== null && <span>ETA: ~{estimatedRemaining}s</span>}
               </div>
             </motion.div>
           )}
@@ -465,7 +462,7 @@ function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-8 p-4 bg-yellow-50/80 dark:bg-yellow-900/30 backdrop-blur-md border border-yellow-200/50 dark:border-yellow-700/50 rounded-2xl text-yellow-800 dark:text-yellow-300 text-sm font-medium shadow-lg w-full max-w-lg"
+              className="mt-6 p-4 bg-amber-50/90 dark:bg-amber-950/40 backdrop-blur-md border border-amber-200/80 dark:border-amber-800/50 rounded-2xl text-amber-800 dark:text-amber-200 text-xs sm:text-sm font-medium shadow-subtle w-full max-w-lg text-left"
             >
               {warningText}
             </motion.div>
@@ -477,16 +474,14 @@ function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-8 flex flex-col items-center p-6 bg-red-50/80 dark:bg-red-900/30 backdrop-blur-md border border-red-200/50 dark:border-red-700/50 rounded-3xl text-google-red w-full max-w-lg shadow-2xl shadow-red-500/10" 
+              className="mt-6 flex items-start gap-3.5 p-4 sm:p-5 bg-rose-50/90 dark:bg-rose-950/40 backdrop-blur-md border border-rose-200/80 dark:border-rose-800/50 rounded-2xl text-rose-800 dark:text-rose-200 w-full max-w-lg shadow-elevated text-left" 
               role="alert"
             >
-              <motion.div
-                animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <ShieldAlert className="w-10 h-10 mb-3" />
-              </motion.div>
-              <p className="font-bold text-center text-lg">{errorMsg}</p>
+              <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-rose-900 dark:text-rose-100">Notice</p>
+                <p className="text-xs sm:text-sm text-rose-700 dark:text-rose-300 mt-0.5 leading-relaxed">{errorMsg}</p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { ExternalLink, ImageOff } from 'lucide-react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { ExternalLink, ImageOff, MapPin, Navigation } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { cn } from '../lib/utils'
 
 export type PlaceDetails = {
   place_id: string
@@ -28,7 +29,7 @@ export function PlacePreview({ place }: { place: PlaceDetails }) {
   const [imageFailed, setImageFailed] = useState(false)
   useEffect(() => setImageFailed(false), [place.photo_url])
   const showPhoto = Boolean(place.photo_url) && !imageFailed
-  
+
   const hasCoordinates =
     typeof place.latitude === 'number' &&
     Number.isFinite(place.latitude) &&
@@ -48,138 +49,100 @@ export function PlacePreview({ place }: { place: PlaceDetails }) {
       }).toString()}`
     : ''
 
-  // 3D Tilt Effect
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 20 })
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 20 })
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["5deg", "-5deg"])
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-5deg", "5deg"])
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const width = rect.width
-    const height = rect.height
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
-    const xPct = mouseX / width - 0.5
-    const yPct = mouseY / height - 0.5
-    x.set(xPct)
-    y.set(yPct)
-  }
-
-  const handleMouseLeave = () => {
-    x.set(0)
-    y.set(0)
-  }
+  const mapLink = place.map_uri || place.google_maps_uri
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.5, type: 'spring', bounce: 0.4 }}
-      style={{ perspective: 1200 }}
-      className="mt-8 w-full max-w-2xl mx-auto"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.35 }}
+      className="mt-6 w-full max-w-2xl mx-auto"
     >
-      <motion.article 
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{ rotateX, rotateY }}
-        className="bg-white/80 dark:bg-black/50 backdrop-blur-2xl rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 lg:p-10 shadow-2xl border border-white/50 dark:border-white/10 relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 pointer-events-none rounded-[2rem]" />
-        
-        <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] h-full relative z-10">
-          <div className="h-48 sm:h-full min-h-[12rem] bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
+      <article className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-elevated dark:shadow-elevated-dark overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr]">
+          
+          {/* Media preview section */}
+          <div className="h-44 sm:h-full min-h-[11rem] bg-slate-100 dark:bg-slate-800/60 relative overflow-hidden">
             {showPhoto ? (
-              <motion.img
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+              <img
                 src={place.photo_url ?? ''}
                 alt={`Photo of ${place.display_name}`}
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={() => setImageFailed(true)}
               />
             ) : hasCoordinates ? (
-              <div className="absolute inset-0 w-full h-full bg-blue-50/50 dark:bg-blue-900/10">
+              <div className="absolute inset-0 w-full h-full bg-blue-50/50 dark:bg-slate-800">
                 <iframe
                   src={mapPreviewUrl}
                   title={`Map of ${place.display_name}`}
-                  className="absolute inset-0 w-full h-full border-0 mix-blend-multiply dark:mix-blend-screen opacity-80"
+                  className="absolute inset-0 w-full h-full border-0 opacity-80"
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
               </div>
             ) : (
-              <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-gray-400">
-                <ImageOff className="w-8 h-8 mb-2 opacity-50" />
-                <span className="text-sm font-medium">Photo unavailable</span>
+              <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center text-slate-400">
+                <ImageOff className="w-7 h-7 mb-1.5 opacity-60" />
+                <span className="text-xs font-medium">No photo available</span>
               </div>
             )}
           </div>
-          
-          <div className="p-6 min-w-0 flex flex-col justify-center">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-xl font-extrabold text-gray-900 dark:text-gray-100 truncate tracking-tight">
-                  {place.display_name}
-                </p>
-                {place.primary_type && (
-                  <p className="text-xs font-bold text-google-blue mt-1.5 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/30 inline-block px-2 py-0.5 rounded-md">
-                    {place.primary_type.replace(/_/g, ' ')}
-                  </p>
+
+          {/* Place details section */}
+          <div className="p-5 sm:p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white truncate tracking-tight">
+                    {place.display_name}
+                  </h3>
+                  {place.primary_type && (
+                    <span className="inline-block mt-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/40 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      {place.primary_type.replace(/_/g, ' ')}
+                    </span>
+                  )}
+                </div>
+
+                {mapLink && (
+                  <a
+                    href={mapLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-xl text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                    title={`Open in ${place.map_provider || 'Maps'}`}
+                    aria-label={`Open in ${place.map_provider || 'Maps'}`}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                 )}
               </div>
-              {(place.map_uri || place.google_maps_uri) && (
-                <motion.a
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  whileTap={{ scale: 0.9 }}
-                  href={place.map_uri || place.google_maps_uri}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-gray-400 hover:text-google-blue shrink-0 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                  aria-label={`Open place in ${place.map_provider}`}
-                >
-                  <ExternalLink className="w-5 h-5" />
-                </motion.a>
+
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-3 leading-relaxed flex items-start gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span>{place.formatted_address}</span>
+              </p>
+            </div>
+
+            {/* Coordinates and photo attribution */}
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              {hasCoordinates && (
+                <span className="flex items-center gap-1 font-mono">
+                  <Navigation className="w-3 h-3 text-slate-400" />
+                  {(place.latitude as number).toFixed(4)}, {(place.longitude as number).toFixed(4)}
+                </span>
+              )}
+
+              {showPhoto && place.photo_attributions.length > 0 && (
+                <span className="truncate max-w-[200px]">
+                  Photo: {place.photo_attributions[0].display_name}
+                </span>
               )}
             </div>
-            
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4 leading-relaxed font-medium">
-              {place.formatted_address}
-            </p>
-            
-            {showPhoto && place.photo_attributions.length > 0 && (
-              <p className="text-xs text-gray-400 mt-5 border-t border-gray-100 dark:border-white/10 pt-3 flex flex-wrap gap-1">
-                <span className="opacity-70">Photo by</span>
-                {place.photo_attributions.map((attribution, index) => (
-                  <span key={`${attribution.display_name}-${index}`}>
-                    {index > 0 && ', '}
-                    {attribution.uri ? (
-                      <a
-                        href={attribution.uri}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:text-google-blue font-semibold transition-colors"
-                      >
-                        {attribution.display_name}
-                      </a>
-                    ) : (
-                      <span className="font-semibold">{attribution.display_name}</span>
-                    )}
-                  </span>
-                ))}
-              </p>
-            )}
-            
-            {place.data_attribution && (
-              <p className="text-xs text-gray-400 mt-2 opacity-70">{place.data_attribution}</p>
-            )}
+
           </div>
         </div>
-      </motion.article>
+      </article>
     </motion.div>
   )
 }
