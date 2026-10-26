@@ -120,6 +120,7 @@ function App() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [resultData, setResultData] = useState<ResultData | null>(null)
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null)
+  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([])
   const [suggestionsLoading, setSuggestionsLoading] = useState(false)
   const [suggestionsError, setSuggestionsError] = useState('')
@@ -269,6 +270,7 @@ function App() {
     setReviewProgress(null)
     setElapsedSeconds(0)
     setSelectedPlace(null)
+    setSelectedKeyword(null)
     isFinishedRef.current = false
 
     const abortController = new AbortController()
@@ -350,6 +352,7 @@ function App() {
     setWarningText('')
     setErrorMsg('')
     setReviewProgress(null)
+    setSelectedKeyword(null)
   }
 
   return (
@@ -540,7 +543,11 @@ function App() {
             )}
 
             <div className="flex flex-col gap-10">
-              <SentimentChart resultData={resultData} />
+              <SentimentChart 
+                resultData={resultData} 
+                selectedKeyword={selectedKeyword}
+                onSelectKeyword={setSelectedKeyword}
+              />
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
                 <ReviewCard title="Top Positive" color="text-google-green" icon={<ThumbsUp className="w-7 h-7 mr-3 drop-shadow-sm" />} reviews={topBottomReviews.top} />

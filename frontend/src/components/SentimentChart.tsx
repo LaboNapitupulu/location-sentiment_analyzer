@@ -1,138 +1,264 @@
 import { useMemo } from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { MessageSquare } from 'lucide-react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { MessageSquare, ThumbsUp, ThumbsDown, Filter } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { cn } from '../lib/utils'
 import type { ResultData, Keyword } from '../App'
 
 type SentimentChartProps = {
   resultData: ResultData
+  selectedKeyword?: string | null
+  onSelectKeyword?: (keyword: string | null) => void
 }
 
-export function SentimentChart({ resultData }: SentimentChartProps) {
-  const chartData = useMemo(() => {
-    return [
-      { name: 'Positive', value: resultData.stats.Positive, color: '#34A853' },
-      { name: 'Negative', value: resultData.stats.Negative, color: '#EA4335' },
-      { name: 'Neutral', value: resultData.stats.Neutral, color: '#FBBC05' },
+const SENTIMENT_COLORS = {
+  Positive: '#16a34a', // Emerald 600
+  Neutral: '#d97706',  // Amber 600
+  Negative: '#dc2626', // Rose 600
+}
+
+export function SentimentChart({ resultData, selectedKeyword, onSelectKeyword }: SentimentChartProps) {
+  const { chartData, totalReviews, dominantSentiment } = useMemo(() => {
+    const total = resultData.meta.analyzed_count || 1
+    const data = [
+      { 
+        name: 'Positive', 
+        value: resultData.stats.Positive, 
+        color: SENTIMENT_COLORS.Positive,
+        percentage: Math.round(((resultData.stats.Positive || 0) / total) * 100)
+      },
+      { 
+        name: 'Neutral', 
+        value: resultData.stats.Neutral, 
+        color: SENTIMENT_COLORS.Neutral,
+        percentage: Math.round(((resultData.stats.Neutral || 0) / total) * 100)
+      },
+      { 
+        name: 'Negative', 
+        value: resultData.stats.Negative, 
+        color: SENTIMENT_COLORS.Negative,
+        percentage: Math.round(((resultData.stats.Negative || 0) / total) * 100)
+      },
     ].filter((item) => item.value > 0)
+
+    // Find dominant
+    const sorted = [...data].sort((a, b) => b.value - a.value)
+    const dominant = sorted[0]?.name || 'Neutral'
+
+    return { chartData: data, totalReviews: total, dominantSentiment: dominant }
   }, [resultData])
 
-  // 3D Tilt Effect
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 20 })
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 20 })
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["3deg", "-3deg"])
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-3deg", "3deg"])
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const width = rect.width
-    const height = rect.height
-    const mouseX = e.clientX - rect.left
-    const mouseY = e.clientY - rect.top
-    x.set(mouseX / width - 0.5)
-    y.set(mouseY / height - 0.5)
-  }
-
-  const handleMouseLeave = () => {
-    x.set(0)
-    y.set(0)
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.7, type: "spring" }}
-      style={{ perspective: 1000 }}
-    >
-      <motion.div 
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{ rotateX, rotateY }}
-        className="bg-white/80 dark:bg-black/50 backdrop-blur-2xl p-6 sm:p-8 md:p-12 rounded-3xl sm:rounded-[2.5rem] shadow-2xl border border-white/50 dark:border-white/10 flex flex-col lg:flex-row gap-10 min-h-[400px] relative overflow-hidden"
-      >
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/30 to-transparent dark:from-white/5 pointer-events-none rounded-[2.5rem]" />
+    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 md:p-10 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-elevated dark:shadow-elevated-dark relative">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         
-        <div className="flex-1 flex flex-col items-center relative z-10">
-          <h3 className="text-2xl font-extrabold mb-2 text-gray-800 dark:text-gray-100 tracking-tight">Sentiment Distribution</h3>
-          <div className="w-full h-80 relative group">
+        {/* Left column: Donut Chart & Quantitative Breakdown */}
+        <div className="lg:col-span-5 flex flex-col items-center">
+          <div className="w-full flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              Sentiment Distribution
+            </h3>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {totalReviews} Total
+            </span>
+          </div>
+
+          <div className="w-full h-64 relative flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie 
                   data={chartData} 
                   cx="50%" 
                   cy="50%" 
-                  innerRadius={75} 
-                  outerRadius={115} 
-                  paddingAngle={6} 
+                  innerRadius={70} 
+                  outerRadius={95} 
+                  paddingAngle={4} 
                   dataKey="value" 
-                  label={({ percent = 0 }) => `${(percent * 100).toFixed(0)}%`}
                   stroke="none"
                 >
-                  {chartData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                  {chartData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.color} />
+                  ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '16px', 
-                    border: '1px solid rgba(255,255,255,0.2)', 
-                    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)',
-                    background: 'rgba(255,255,255,0.85)',
-                    backdropFilter: 'blur(10px)',
-                    color: '#333'
-                  }} 
-                  itemStyle={{ fontWeight: 'bold' }}
-                />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
-            
-            {/* Center glow effect behind pie chart */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-white/50 dark:bg-black/50 rounded-full blur-2xl -z-10 group-hover:bg-white/80 dark:group-hover:bg-white/10 transition-all duration-500" />
+
+            {/* Donut Center Display */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                {chartData.find(d => d.name === dominantSentiment)?.percentage ?? 0}%
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                {dominantSentiment}
+              </span>
+            </div>
+          </div>
+
+          {/* Linear Progress Breakdown */}
+          <div className="w-full space-y-3 mt-4">
+            {chartData.map((item) => (
+              <div key={item.name} className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    {item.name}
+                  </span>
+                  <span>{item.value} reviews ({item.percentage}%)</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${item.percentage}%`, backgroundColor: item.color }} 
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="flex-1 lg:border-l border-t lg:border-t-0 border-gray-200/50 dark:border-white/10 pt-8 lg:pt-0 lg:pl-10 flex flex-col justify-center relative z-10">
-          <h4 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-5 flex items-center tracking-tight">
-            <MessageSquare className="w-6 h-6 mr-3 text-google-blue" /> Most Frequent Words
-          </h4>
-          <div className="flex flex-wrap gap-3">
-            {resultData.keywords.map((keyword, i) => (
-              <motion.span 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: i * 0.05 }}
-                whileHover={{ scale: 1.1, y: -2 }}
-                key={keyword.text} 
-                className="px-4 py-2 bg-white/60 dark:bg-gray-800/60 shadow-sm border border-gray-200/60 dark:border-gray-700/60 text-gray-700 dark:text-gray-300 rounded-full text-sm font-bold backdrop-blur-md cursor-default"
-              >
-                {keyword.text} <span className="text-gray-400 dark:text-gray-500 ml-1 font-medium">({keyword.value})</span>
-              </motion.span>
-            ))}
+        {/* Right column: Keywords & Praise/Complaint Breakdown */}
+        <div className="lg:col-span-7 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-10 space-y-8">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-500" />
+                Frequently Mentioned Topics
+              </h4>
+              {selectedKeyword && (
+                <button
+                  type="button"
+                  onClick={() => onSelectKeyword?.(null)}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                >
+                  <Filter className="w-3 h-3" /> Clear filter ({selectedKeyword})
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {resultData.keywords.map((keyword) => {
+                const isSelected = selectedKeyword?.toLowerCase() === keyword.text.toLowerCase()
+                return (
+                  <button
+                    key={keyword.text}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        onSelectKeyword?.(null)
+                      } else {
+                        onSelectKeyword?.(keyword.text)
+                      }
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95",
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/30"
+                        : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                    )}
+                  >
+                    <span>{keyword.text}</span>
+                    <span className={cn(
+                      "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                    )}>
+                      {keyword.value}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
+          {/* Keyword Groups: Praise vs Complaints */}
           {resultData.keyword_groups && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-12">
-              <KeywordGroup title="Praise" color="text-google-green" items={resultData.keyword_groups.positive} />
-              <KeywordGroup title="Complaints" color="text-google-red" items={resultData.keyword_groups.negative} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <KeywordGroup
+                title="Common Praise"
+                icon={<ThumbsUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                badgeColor="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/40"
+                items={resultData.keyword_groups.positive}
+                onSelectKeyword={onSelectKeyword}
+                selectedKeyword={selectedKeyword}
+              />
+              <KeywordGroup
+                title="Common Complaints"
+                icon={<ThumbsDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
+                badgeColor="text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/40"
+                items={resultData.keyword_groups.negative}
+                onSelectKeyword={onSelectKeyword}
+                selectedKeyword={selectedKeyword}
+              />
             </div>
           )}
         </div>
-      </motion.div>
-    </motion.div>
+
+      </div>
+    </div>
   )
 }
 
-function KeywordGroup({ title, color, items }: { title: string; color: string; items: Keyword[] }) {
+function CustomTooltip({ active, payload }: any) {
+  if (!active || !payload || !payload.length) return null
+  const data = payload[0]
   return (
-    <div className="bg-gray-50/50 dark:bg-gray-800/30 p-4 rounded-2xl border border-gray-100 dark:border-gray-800/50">
-      <p className={cn("text-xs font-extrabold uppercase tracking-widest mb-3", color)}>{title}</p>
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-semibold">
-        {items.length > 0 ? items.map((item) => item.text).join(', ') : 'No data yet'}
-      </p>
+    <div className="bg-slate-900/95 dark:bg-slate-950/95 text-white px-3 py-2 rounded-xl text-xs font-semibold shadow-2xl border border-slate-700/60 backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: data.payload.color }} />
+        <span>{data.name}:</span>
+        <span className="text-white font-bold">{data.value} reviews ({data.payload.percentage}%)</span>
+      </div>
+    </div>
+  )
+}
+
+function KeywordGroup({
+  title,
+  icon,
+  badgeColor,
+  items,
+  onSelectKeyword,
+  selectedKeyword,
+}: {
+  title: string
+  icon: React.ReactNode
+  badgeColor: string
+  items: Keyword[]
+  onSelectKeyword?: (keyword: string | null) => void
+  selectedKeyword?: string | null
+}) {
+  return (
+    <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60">
+      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 mb-2.5">
+        {icon}
+        <span>{title}</span>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-slate-400">None detected</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {items.map((item) => {
+            const isSelected = selectedKeyword?.toLowerCase() === item.text.toLowerCase()
+            return (
+              <button
+                key={item.text}
+                type="button"
+                onClick={() => onSelectKeyword?.(isSelected ? null : item.text)}
+                className={cn(
+                  "text-xs px-2.5 py-1 rounded-lg border font-medium transition-colors",
+                  isSelected
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : badgeColor
+                )}
+              >
+                {item.text}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
