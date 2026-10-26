@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Clock3, Sparkles, ShieldAlert, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { Clock3, ShieldAlert } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { DynamicBackground } from './components/DynamicBackground'
@@ -9,7 +9,8 @@ import type { PlaceSuggestion } from './components/SearchBar'
 import { PlacePreview, type PlaceDetails } from './components/PlacePreview'
 import { AnalyticsKPIHeader } from './components/AnalyticsKPIHeader'
 import { SentimentChart } from './components/SentimentChart'
-import { ReviewCard, type Review, type Sentiment } from './components/ReviewCard'
+import { ReviewExplorer } from './components/ReviewExplorer'
+import type { Review, Sentiment } from './components/ReviewCard'
 
 
 type Stats = Record<Sentiment, number>
@@ -226,16 +227,6 @@ function App() {
     return Math.max(0, Math.round((elapsedSeconds * (100 - progress)) / progress))
   }, [elapsedSeconds, isLoading, progress])
 
-  const topBottomReviews = useMemo(() => {
-    if (!resultData) return { top: [], bottom: [] }
-    const positive = resultData.reviews
-      .filter((review) => review.sentiment === 'Positive')
-      .sort((a, b) => b.confidence - a.confidence)
-    const negative = resultData.reviews
-      .filter((review) => review.sentiment === 'Negative')
-      .sort((a, b) => b.confidence - a.confidence)
-    return { top: positive.slice(0, 5), bottom: negative.slice(0, 5) }
-  }, [resultData])
 
   const closeStream = () => {
     abortControllerRef.current?.abort()
@@ -517,42 +508,19 @@ function App() {
               onClear={clearResults} 
             />
 
-            {resultData.anomalies.length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="mb-10 bg-yellow-50/90 dark:bg-yellow-900/30 backdrop-blur-xl border border-yellow-200/50 dark:border-yellow-700/50 rounded-3xl p-6 sm:p-8 flex items-start shadow-xl shadow-yellow-500/5"
-              >
-                <ShieldAlert className="w-8 h-8 text-yellow-600 dark:text-yellow-400 mr-5 shrink-0 mt-1 drop-shadow-sm" />
-                <div className="min-w-0">
-                  <h3 className="text-lg font-extrabold text-yellow-900 dark:text-yellow-300 tracking-tight">Potential Rating Anomalies ({resultData.anomalies.length})</h3>
-                  <p className="text-yellow-700 dark:text-yellow-500 text-sm mt-1.5 font-medium">The star rating conflicts with the text sentiment. This is an AI indicator, not definitive proof of spam.</p>
-                  <div className="mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {resultData.anomalies.slice(0, 3).map((review) => (
-                      <div key={review.review_id ?? `${review.text}-${review.date}`} className="text-sm bg-white/80 dark:bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-yellow-100 dark:border-yellow-800/50 shadow-sm">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-extrabold text-yellow-600">★ {review.rating ?? '—'}</span>
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 uppercase tracking-widest">AI: {review.sentiment}</span>
-                        </div>
-                        <span className="italic font-medium text-gray-700 dark:text-gray-300">“{review.text}”</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            <div className="flex flex-col gap-10">
+            <div className="flex flex-col gap-8">
               <SentimentChart 
                 resultData={resultData} 
                 selectedKeyword={selectedKeyword}
                 onSelectKeyword={setSelectedKeyword}
               />
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                <ReviewCard title="Top Positive" color="text-google-green" icon={<ThumbsUp className="w-7 h-7 mr-3 drop-shadow-sm" />} reviews={topBottomReviews.top} />
-                <ReviewCard title="Top Complaints" color="text-google-red" icon={<ThumbsDown className="w-7 h-7 mr-3 drop-shadow-sm" />} reviews={topBottomReviews.bottom} />
-              </div>
+              <ReviewExplorer
+                reviews={resultData.reviews}
+                anomalies={resultData.anomalies}
+                selectedKeyword={selectedKeyword}
+                onClearKeyword={() => setSelectedKeyword(null)}
+              />
             </div>
           </motion.section>
         )}
