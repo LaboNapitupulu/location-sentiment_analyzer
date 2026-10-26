@@ -381,29 +381,28 @@ function App() {
       </motion.button>
 
       {/* Hero Section */}
-      <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4">
+      <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4 text-center">
         <motion.div 
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center px-4 py-1.5 mb-8 text-xs font-bold uppercase tracking-widest rounded-full bg-white/60 dark:bg-white/10 text-gray-800 dark:text-gray-200 border border-white/50 dark:border-white/10 shadow-sm backdrop-blur-md"
+          className="inline-flex items-center gap-2 px-3.5 py-1 mb-5 text-xs font-semibold rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 shadow-subtle backdrop-blur-md"
         >
-          <Sparkles className="w-4 h-4 mr-2 text-google-blue" /> AI-Powered Analysis
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Location Review & Sentiment Intelligence
         </motion.div>
         
         <motion.h1 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, type: 'spring' }}
-          className="text-4xl sm:text-5xl md:text-7xl font-black mb-6 text-center tracking-tighter drop-shadow-sm flex flex-wrap justify-center gap-x-2"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-3 tracking-tight text-slate-900 dark:text-white"
         >
-          <span className="whitespace-nowrap">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">Geo</span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-red to-red-400">Sen</span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-yellow to-yellow-400">ti</span>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-blue to-blue-400">ment</span>
-          </span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-google-green to-green-400">Analyzer</span>
+          GeoSentiment <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500 dark:from-blue-400 dark:to-teal-300">Analyzer</span>
         </motion.h1>
+
+        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mb-7 leading-relaxed">
+          Extract actionable customer sentiment, rating discrepancies, and multilingual feedback from Google Maps reviews.
+        </p>
 
         <SearchBar 
           input={input} 
