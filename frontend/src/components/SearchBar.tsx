@@ -84,19 +84,20 @@ export function SearchBar({
           Google Maps link or venue name
         </label>
 
+        {/* Google Signature Rounded-Full Search Bar */}
         <div
           className={cn(
-            "relative flex items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl border transition-all duration-300 px-5 py-3.5 shadow-elevated dark:shadow-elevated-dark",
+            "relative flex items-center bg-white dark:bg-[#303134] rounded-full transition-all duration-200 px-5 py-3 border",
             isLoading
-              ? "border-blue-500 ring-2 ring-blue-500/20"
-              : "border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20"
+              ? "border-[#4285F4] ring-2 ring-[#4285F4]/30 shadow-lg"
+              : "border-[#dfe1e5] dark:border-[#5f6368] shadow-[0_1px_6px_rgba(32,33,36,0.2)] hover:shadow-[0_1px_6px_rgba(32,33,36,0.35)] focus-within:shadow-[0_1px_6px_rgba(32,33,36,0.35)] focus-within:border-transparent focus-within:ring-2 focus-within:ring-[#4285F4]/40"
           )}
         >
-          <div className="mr-3 text-blue-600 dark:text-blue-400 shrink-0">
+          <div className="mr-3 text-[#4285F4] shrink-0">
             {isLoading ? (
-              <LoaderCircle className="w-5 h-5 animate-spin" />
+              <LoaderCircle className="w-5 h-5 animate-spin text-[#4285F4]" />
             ) : (
-              <MapPin className="w-5 h-5" />
+              <MapPin className="w-5 h-5 text-[#4285F4]" />
             )}
           </div>
 
@@ -104,8 +105,8 @@ export function SearchBar({
             ref={inputRef}
             id="location-input"
             type="text"
-            placeholder="Search venue name (e.g. Grand Indonesia) or paste Maps URL..."
-            className="flex-1 min-w-0 bg-transparent text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-sm sm:text-base outline-none disabled:opacity-50 font-normal"
+            placeholder="Search on Google Maps (e.g. Grand Indonesia) or paste link..."
+            className="flex-1 min-w-0 bg-transparent text-[#202124] dark:text-[#e8eaed] placeholder:text-[#80868b] dark:placeholder:text-[#9aa0a6] text-sm sm:text-base outline-none disabled:opacity-50 font-normal"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -120,7 +121,7 @@ export function SearchBar({
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mr-2"
+              className="p-1 rounded-full text-[#80868b] hover:text-[#202124] dark:hover:text-[#e8eaed] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors mr-2"
               aria-label="Clear search input"
             >
               <X className="w-4 h-4" />
@@ -131,7 +132,7 @@ export function SearchBar({
             <button
               type="button"
               onClick={cancelAnalysis}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#fce8e6] dark:bg-[#5c2b29] text-[#c5221f] dark:text-[#f28b82] text-xs font-semibold hover:bg-[#fad2cf] transition-colors"
             >
               <X className="w-3.5 h-3.5" /> Cancel
             </button>
@@ -139,15 +140,15 @@ export function SearchBar({
             <button
               type="submit"
               disabled={!input.trim()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] disabled:opacity-40 disabled:hover:bg-[#1a73e8] text-white text-xs sm:text-sm font-semibold shadow-sm transition-all active:scale-[0.98]"
             >
               <Search className="w-4 h-4" />
-              <span>Analyze</span>
+              <span>Search</span>
             </button>
           )}
         </div>
 
-        {/* Suggestion dropdown with accessible listbox */}
+        {/* Suggestion dropdown with Google Material styling */}
         <AnimatePresence>
           {!isLoading && (suggestionsLoading || suggestions.length > 0 || suggestionsError) && (
             <motion.div
@@ -155,17 +156,17 @@ export function SearchBar({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 text-left shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 z-50 max-h-80 overflow-y-auto"
+              className="absolute left-0 right-0 top-full mt-2 overflow-hidden rounded-2xl border border-[#dfe1e5] bg-white text-left shadow-2xl dark:border-[#5f6368] dark:bg-[#303134] z-50 max-h-80 overflow-y-auto"
             >
               {suggestionsLoading && (
-                <div className="flex items-center gap-2.5 px-4 py-3.5 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  <LoaderCircle className="h-4 w-4 animate-spin text-blue-500" />
-                  <span>Searching location database…</span>
+                <div className="flex items-center gap-2.5 px-4 py-3.5 text-xs sm:text-sm text-[#5f6368] dark:text-[#9aa0a6]">
+                  <LoaderCircle className="h-4 w-4 animate-spin text-[#4285F4]" />
+                  <span>Searching Google Places…</span>
                 </div>
               )}
 
               {!suggestionsLoading && suggestionsError && (
-                <div className="px-4 py-3 text-xs sm:text-sm text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30">
+                <div className="px-4 py-3 text-xs sm:text-sm text-[#c5221f] dark:text-[#f28b82] bg-[#fce8e6]/50 dark:bg-[#5c2b29]/40">
                   {suggestionsError}
                 </div>
               )}
@@ -174,8 +175,8 @@ export function SearchBar({
                 <ul
                   ref={listRef}
                   role="listbox"
-                  aria-label="Location suggestions"
-                  className="divide-y divide-slate-100 dark:divide-slate-800/80 py-1"
+                  aria-label="Google Place suggestions"
+                  className="divide-y divide-[#f1f3f4] dark:divide-[#3c4043] py-1"
                 >
                   {suggestions.map((suggestion, index) => {
                     const isSelected = selectedIndex === index
@@ -190,20 +191,20 @@ export function SearchBar({
                           className={cn(
                             "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors",
                             isSelected
-                              ? "bg-blue-50/90 dark:bg-blue-950/60 text-blue-900 dark:text-blue-100"
-                              : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
+                              ? "bg-[#e8f0fe] dark:bg-[#3c4043] text-[#1a73e8] dark:text-[#8ab4f8]"
+                              : "hover:bg-[#f8f9fa] dark:hover:bg-[#3c4043]/60 text-[#202124] dark:text-[#e8eaed]"
                           )}
                         >
                           <MapPin className={cn(
                             "mt-0.5 h-4 w-4 shrink-0 transition-colors",
-                            isSelected ? "text-blue-600 dark:text-blue-400" : "text-slate-400"
+                            isSelected ? "text-[#1a73e8] dark:text-[#8ab4f8]" : "text-[#80868b]"
                           )} />
                           <div className="min-w-0 flex-1">
                             <span className="block truncate text-sm font-semibold">
                               {suggestion.main_text}
                             </span>
                             {suggestion.secondary_text && (
-                              <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
+                              <span className="mt-0.5 block truncate text-xs text-[#5f6368] dark:text-[#9aa0a6]">
                                 {suggestion.secondary_text}
                               </span>
                             )}
@@ -219,11 +220,11 @@ export function SearchBar({
         </AnimatePresence>
       </form>
 
-      {/* Quick Demo Place Presets */}
+      {/* Quick Demo Place Presets - Google style pill chips */}
       {!isLoading && (
-        <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-1">
-          <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 flex items-center mr-1">
-            <Compass className="w-3 h-3 mr-1" /> Quick test:
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 px-1">
+          <span className="text-xs font-medium text-[#80868b] dark:text-[#9aa0a6] flex items-center mr-1">
+            <Compass className="w-3.5 h-3.5 mr-1 text-[#4285F4]" /> Quick test:
           </span>
           {DEMO_PRESETS.map((preset) => (
             <button
@@ -233,7 +234,7 @@ export function SearchBar({
                 setInput(preset.query)
                 inputRef.current?.focus()
               }}
-              className="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-200/50 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+              className="text-xs font-medium px-3 py-1.5 rounded-full bg-white dark:bg-[#303134] hover:bg-[#f8f9fa] dark:hover:bg-[#3c4043] text-[#3c4043] dark:text-[#e8eaed] border border-[#dadce0] dark:border-[#5f6368] transition-colors shadow-sm"
             >
               {preset.label}
             </button>

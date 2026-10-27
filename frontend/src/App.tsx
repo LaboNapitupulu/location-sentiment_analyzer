@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { FormEvent } from 'react'
-import { Clock3, ShieldAlert, Sun, Moon } from 'lucide-react'
+import { Clock3, ShieldAlert, Sun, Moon, Server, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { DynamicBackground } from './components/DynamicBackground'
@@ -66,15 +66,6 @@ function isResultData(value: StreamMessage): value is StreamMessage & ResultData
   )
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
-const apiUrl = (path: string) => `${API_BASE_URL}${path}`
-const apiHeaders = API_BASE_URL.includes('.ngrok')
-  ? { 'ngrok-skip-browser-warning': 'true' }
-  : undefined
-
-const buildAnalyzeUrl = (input: string) =>
-  apiUrl(`/api/analyze?url=${encodeURIComponent(input)}`)
-
 function isMapsUrl(value: string): boolean {
   let candidate = value.trim()
   if (/^(?:www\.|maps\.)?google\./i.test(candidate)) {
@@ -105,6 +96,12 @@ function isMapsUrl(value: string): boolean {
   }
 }
 
+const getInitialApiBaseUrl = () => {
+  const saved = localStorage.getItem('geosentiment-api-base-url')
+  if (saved !== null) return saved.trim().replace(/\/+$/, '')
+  return (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
+}
+
 function App() {
   const [input, setInput] = useState('')
   const [isDark, setIsDark] = useState(() => {
@@ -112,6 +109,10 @@ function App() {
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
+  const [apiBaseUrl, setApiBaseUrl] = useState<string>(getInitialApiBaseUrl)
+  const [serverModalOpen, setServerModalOpen] = useState(false)
+  const [serverUrlInput, setServerUrlInput] = useState(apiBaseUrl)
+
   const [isLoading, setIsLoading] = useState(false)
   const [statusText, setStatusText] = useState('')
   const [warningText, setWarningText] = useState('')
@@ -130,6 +131,34 @@ function App() {
   const placesAbortControllerRef = useRef<AbortController | null>(null)
   const placesSessionTokenRef = useRef(crypto.randomUUID())
   const isFinishedRef = useRef(false)
+
+  const isRemoteHost = typeof window !== 'undefined' && 
+    window.location.hostname !== 'localhost' && 
+    window.location.hostname !== '127.0.0.1'
+
+  const apiUrl = useCallback((path: string) => `${apiBaseUrl}${path}`, [apiBaseUrl])
+  const apiHeaders = useMemo(() => apiBaseUrl.includes('.ngrok')
+    ? { 'ngrok-skip-browser-warning': 'true' }
+    : undefined, [apiBaseUrl])
+
+  const buildAnalyzeUrl = (queryInput: string) =>
+    apiUrl(`/api/analyze?url=${encodeURIComponent(queryInput)}`)
+
+  const handleSaveServerUrl = () => {
+    const cleaned = serverUrlInput.trim().replace(/\/+$/, '')
+    setApiBaseUrl(cleaned)
+    localStorage.setItem('geosentiment-api-base-url', cleaned)
+    setServerModalOpen(false)
+    setErrorMsg('')
+  }
+
+  const handleResetServerUrl = () => {
+    setApiBaseUrl('')
+    setServerUrlInput('')
+    localStorage.removeItem('geosentiment-api-base-url')
+    setServerModalOpen(false)
+    setErrorMsg('')
+  }
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -188,7 +217,7 @@ function App() {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [input, isLoading])
+  }, [input, isLoading, apiUrl, apiHeaders])
 
   const selectSuggestion = async (suggestion: PlaceSuggestion) => {
     placesAbortControllerRef.current?.abort()
@@ -227,7 +256,6 @@ function App() {
     return Math.max(0, Math.round((elapsedSeconds * (100 - progress)) / progress))
   }, [elapsedSeconds, isLoading, progress])
 
-
   const closeStream = () => {
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
@@ -255,7 +283,7 @@ function App() {
     setIsLoading(true)
     setErrorMsg('')
     setWarningText('')
-    setStatusText('Connecting to the server...')
+    setStatusText('Connecting to Google Maps scraper & NLP server...')
     setResultData(null)
     setProgress(0)
     setReviewProgress(null)
@@ -301,7 +329,7 @@ function App() {
 
               if (data.error) {
                 isFinishedRef.current = true
-                setErrorMsg(data.status || 'An error occurred while processing the data.')
+                setErrorMsg(data.status || 'An error occurred while processing reviews.')
                 setIsLoading(false)
                 closeStream()
                 return
@@ -347,53 +375,77 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen relative bg-gray-50 dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-100 flex flex-col items-center pt-20 pb-24 font-sans transition-colors duration-500 selection:bg-google-blue/30 overflow-x-hidden">
+    <main className="min-h-screen relative bg-white dark:bg-[#202124] text-[#202124] dark:text-[#e8eaed] flex flex-col items-center pt-16 pb-24 font-sans transition-colors duration-300 selection:bg-[#4285F4]/20 selection:text-[#1a73e8] overflow-x-hidden">
       
-      {/* Dynamic 3D Animated Background */}
+      {/* Google Ambient Halo Background */}
       <DynamicBackground />
 
-      {/* Theme Toggle */}
-      <button
-        type="button"
-        onClick={() => setIsDark((value) => !value)}
-        className="absolute top-6 right-6 p-2.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 shadow-subtle hover:shadow-elevated transition-all z-50 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-        aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      >
-        <AnimatePresence mode="wait">
-          {isDark ? (
-            <motion.div key="sun" initial={{ opacity: 0, rotate: -30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 30 }} transition={{ duration: 0.15 }}>
-              <Sun className="w-5 h-5 text-amber-400" />
-            </motion.div>
-          ) : (
-            <motion.div key="moon" initial={{ opacity: 0, rotate: 30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -30 }} transition={{ duration: 0.15 }}>
-              <Moon className="w-5 h-5 text-slate-700" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
+      {/* Top Navigation Bar: Server Settings & Theme Toggle */}
+      <div className="absolute top-5 right-6 flex items-center gap-2.5 z-50">
+        <button
+          type="button"
+          onClick={() => {
+            setServerUrlInput(apiBaseUrl)
+            setServerModalOpen(true)
+          }}
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#303134] border border-[#dadce0] dark:border-[#5f6368] shadow-sm hover:shadow-md transition-all text-xs font-semibold text-[#3c4043] dark:text-[#bdc1c6]"
+          title="Configure backend server URL"
+        >
+          <Server className="w-3.5 h-3.5 text-[#4285F4]" />
+          <span className="hidden sm:inline">
+            {apiBaseUrl ? 'Tunnel API' : 'Backend: Localhost'}
+          </span>
+        </button>
 
-      {/* Hero Section */}
-      <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4 text-center">
+        <button
+          type="button"
+          onClick={() => setIsDark((value) => !value)}
+          className="p-2 rounded-full bg-white dark:bg-[#303134] border border-[#dadce0] dark:border-[#5f6368] shadow-sm hover:shadow-md transition-all text-[#3c4043] dark:text-[#bdc1c6]"
+          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          <AnimatePresence mode="wait">
+            {isDark ? (
+              <motion.div key="sun" initial={{ opacity: 0, rotate: -30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 30 }} transition={{ duration: 0.15 }}>
+                <Sun className="w-4 h-4 text-[#FBBC05]" />
+              </motion.div>
+            ) : (
+              <motion.div key="moon" initial={{ opacity: 0, rotate: 30 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -30 }} transition={{ duration: 0.15 }}>
+                <Moon className="w-4 h-4 text-[#5f6368]" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
+      </div>
+
+      {/* Google Themed Hero Section */}
+      <section className="relative z-10 flex flex-col items-center w-full max-w-3xl px-4 text-center mt-6">
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3.5 py-1 mb-5 text-xs font-semibold rounded-full bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 shadow-subtle backdrop-blur-md"
+          className="inline-flex items-center gap-2 px-3.5 py-1 mb-5 text-xs font-semibold rounded-full bg-white dark:bg-[#303134] text-[#3c4043] dark:text-[#bdc1c6] border border-[#dadce0] dark:border-[#5f6368] shadow-sm"
         >
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Location Review & Sentiment Intelligence
+          <span className="inline-block w-2 h-2 rounded-full bg-[#34A853] animate-pulse" />
+          Google Maps Review & Sentiment Analytics
         </motion.div>
         
+        {/* Authentic Google Multi-Color Headline */}
         <motion.h1 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-3 tracking-tight text-slate-900 dark:text-white"
+          className="text-4xl sm:text-6xl md:text-7xl font-black mb-3 tracking-tight drop-shadow-sm flex flex-wrap justify-center items-center gap-x-1 sm:gap-x-2"
         >
-          GeoSentiment <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500 dark:from-blue-400 dark:to-teal-300">Analyzer</span>
+          <span className="whitespace-nowrap">
+            <span className="text-[#4285F4]">Geo</span>
+            <span className="text-[#EA4335]">Sen</span>
+            <span className="text-[#FBBC05]">ti</span>
+            <span className="text-[#4285F4]">ment</span>
+          </span>
+          <span className="text-[#34A853]">Analyzer</span>
         </motion.h1>
 
-        <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mb-7 leading-relaxed">
-          Extract actionable customer sentiment, rating discrepancies, and multilingual feedback from Google Maps reviews.
+        <p className="text-sm sm:text-base text-[#5f6368] dark:text-[#9aa0a6] max-w-xl mb-7 leading-relaxed font-normal">
+          Real-time Google Maps review extraction, IndoBERT sentiment analytics, and rating anomaly detection.
         </p>
 
         <SearchBar 
@@ -419,37 +471,37 @@ function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-8 w-full max-w-lg bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 p-6 rounded-2xl sm:rounded-3xl shadow-elevated dark:shadow-elevated-dark overflow-hidden text-left"
+              className="mt-8 w-full max-w-lg bg-white dark:bg-[#303134] border border-[#dadce0] dark:border-[#5f6368] p-6 rounded-3xl shadow-lg text-left"
             >
               <div className="flex items-center justify-between text-xs sm:text-sm mb-2.5">
-                <span className="text-slate-800 dark:text-slate-200 font-bold tracking-tight flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                  {statusText || 'Processing location data...'}
+                <span className="text-[#202124] dark:text-[#e8eaed] font-bold tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#4285F4] animate-ping" />
+                  {statusText || 'Scraping and analyzing reviews...'}
                 </span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{progress}%</span>
+                <span className="font-mono font-bold text-[#1a73e8] dark:text-[#8ab4f8]">{progress}%</span>
               </div>
 
               <div
-                className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"
+                className="w-full h-2 bg-[#f1f3f4] dark:bg-[#202124] rounded-full overflow-hidden"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={progress}
               >
                 <motion.div 
-                  className="h-full bg-gradient-to-r from-blue-600 to-teal-500 dark:from-blue-500 dark:to-teal-400"
+                  className="h-full bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#34A853]"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ ease: "easeOut", duration: 0.3 }}
                 />
               </div>
 
-              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-semibold text-[#5f6368] dark:text-[#9aa0a6]">
                 {reviewProgress && reviewProgress.total > 0 && (
                   <span>Reviews extracted: {reviewProgress.current} / {reviewProgress.total}</span>
                 )}
                 <span className="flex items-center gap-1">
-                  <Clock3 className="w-3 h-3 text-blue-500" /> {elapsedSeconds}s elapsed
+                  <Clock3 className="w-3 h-3 text-[#4285F4]" /> {elapsedSeconds}s elapsed
                 </span>
                 {estimatedRemaining !== null && <span>ETA: ~{estimatedRemaining}s</span>}
               </div>
@@ -462,25 +514,69 @@ function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-6 p-4 bg-amber-50/90 dark:bg-amber-950/40 backdrop-blur-md border border-amber-200/80 dark:border-amber-800/50 rounded-2xl text-amber-800 dark:text-amber-200 text-xs sm:text-sm font-medium shadow-subtle w-full max-w-lg text-left"
+              className="mt-6 p-4 bg-[#fef7e0] dark:bg-[#3d3215] border border-[#fce8b2] dark:border-[#735817] rounded-2xl text-[#b06000] dark:text-[#fdd663] text-xs sm:text-sm font-medium shadow-sm w-full max-w-lg text-left"
             >
               {warningText}
             </motion.div>
           )}
 
+          {/* Error Banner with Guided Resolution */}
           {errorMsg && !isLoading && (
             <motion.div 
               key="error"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-6 flex items-start gap-3.5 p-4 sm:p-5 bg-rose-50/90 dark:bg-rose-950/40 backdrop-blur-md border border-rose-200/80 dark:border-rose-800/50 rounded-2xl text-rose-800 dark:text-rose-200 w-full max-w-lg shadow-elevated text-left" 
+              className="mt-6 p-5 bg-[#fce8e6] dark:bg-[#3c1c1b] border border-[#fad2cf] dark:border-[#5c2b29] rounded-2xl text-[#c5221f] dark:text-[#f28b82] w-full max-w-xl shadow-lg text-left" 
               role="alert"
             >
-              <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm text-rose-900 dark:text-rose-100">Notice</p>
-                <p className="text-xs sm:text-sm text-rose-700 dark:text-rose-300 mt-0.5 leading-relaxed">{errorMsg}</p>
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-[#c5221f] dark:text-[#f28b82] shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm text-[#202124] dark:text-[#fce8e6]">
+                    Backend Connection Failed
+                  </p>
+                  
+                  {isRemoteHost ? (
+                    <div className="mt-2 text-xs text-[#3c4043] dark:text-[#e8eaed] space-y-2.5 leading-relaxed">
+                      <p>
+                        Anda sedang membuka web di <strong>{window.location.hostname}</strong> (Vercel). Karena backend scraper Playwright & AI IndoBERT berjalan di komputer lokal Anda, browser memblokir koneksi HTTP langsung karena batasan keamanan HTTPS (Mixed Content).
+                      </p>
+                      
+                      <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-[#fad2cf] dark:border-[#5c2b29] space-y-1.5">
+                        <p className="font-bold text-[#1a73e8] dark:text-[#8ab4f8]">👉 Solusi Paling Mudah (Jalankan Lokal):</p>
+                        <p>
+                          Jalankan frontend lokal dan buka di browser: <br />
+                          <a href="http://localhost:5173" className="font-mono font-bold underline text-[#1a73e8] dark:text-[#8ab4f8]" target="_blank" rel="noreferrer">
+                            http://localhost:5173
+                          </a>
+                        </p>
+                        <p className="text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
+                          (Pastikan <code>npm run dev</code> dan <code>.\.venv\Scripts\python.exe main.py</code> sudah aktif)
+                        </p>
+                      </div>
+
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setServerUrlInput(apiBaseUrl)
+                            setServerModalOpen(true)
+                          }}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1a73e8] text-white text-xs font-semibold hover:bg-[#1557b0] transition-colors"
+                        >
+                          <Server className="w-3.5 h-3.5" />
+                          Hubungkan via URL Ngrok HTTPS
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#3c4043] dark:text-[#e8eaed] mt-1 leading-relaxed">
+                      Pastikan backend Python sedang aktif di port 8001: <br />
+                      <code className="px-1.5 py-0.5 rounded bg-white dark:bg-[#202124] font-mono text-[11px]">cd backend && .\.venv\Scripts\python.exe main.py</code>
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
@@ -518,6 +614,74 @@ function App() {
               />
             </div>
           </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* Backend Server Settings Modal */}
+      <AnimatePresence>
+        {serverModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-[#303134] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-[#dadce0] dark:border-[#5f6368] text-left"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-[#f1f3f4] dark:border-[#3c4043]">
+                <div className="flex items-center gap-2">
+                  <Server className="w-5 h-5 text-[#4285F4]" />
+                  <h3 className="text-lg font-bold text-[#202124] dark:text-[#e8eaed]">Pengaturan Server Backend</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setServerModalOpen(false)}
+                  className="p-1.5 rounded-full text-[#5f6368] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="py-4 space-y-3">
+                <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] leading-relaxed">
+                  Jika Anda menggunakan Vercel, jalankan <code>ngrok http 8001</code> di komputer Anda lalu tempelkan URL HTTPS yang dihasilkan di bawah:
+                </p>
+
+                <div>
+                  <label htmlFor="backend-url" className="block text-xs font-bold text-[#3c4043] dark:text-[#bdc1c6] mb-1">
+                    URL API Backend (HTTPS)
+                  </label>
+                  <input
+                    id="backend-url"
+                    type="url"
+                    placeholder="https://contoh-ngrok.ngrok-free.app"
+                    value={serverUrlInput}
+                    onChange={(e) => setServerUrlInput(e.target.value)}
+                    className="w-full bg-[#f8f9fa] dark:bg-[#202124] border border-[#dadce0] dark:border-[#5f6368] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#202124] dark:text-[#e8eaed] outline-none focus:border-[#4285F4]"
+                  />
+                  <p className="text-[11px] text-[#80868b] mt-1">
+                    Kosongkan jika menjalankan frontend di <code>localhost:5173</code> (proxy otomatis).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#f1f3f4] dark:border-[#3c4043]">
+                <button
+                  type="button"
+                  onClick={handleResetServerUrl}
+                  className="px-4 py-2 rounded-full text-xs font-semibold text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"
+                >
+                  Reset Default
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveServerUrl}
+                  className="px-5 py-2 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-semibold shadow-sm transition-colors"
+                >
+                  Simpan URL
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </main>
