@@ -97,8 +97,21 @@ function isMapsUrl(value: string): boolean {
 }
 
 const getInitialApiBaseUrl = () => {
-  const saved = localStorage.getItem('geosentiment-api-base-url')
-  if (saved !== null) return saved.trim().replace(/\/+$/, '')
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search)
+    const apiParam = params.get('api')
+    if (apiParam) {
+      const cleaned = apiParam.trim().replace(/\/+$/, '')
+      try {
+        localStorage.setItem('geosentiment-api-base-url', cleaned)
+      } catch {
+        // ignore
+      }
+      return cleaned
+    }
+    const saved = localStorage.getItem('geosentiment-api-base-url')
+    if (saved !== null) return saved.trim().replace(/\/+$/, '')
+  }
   return (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
 }
 
@@ -112,6 +125,7 @@ function App() {
   const [apiBaseUrl, setApiBaseUrl] = useState<string>(getInitialApiBaseUrl)
   const [serverModalOpen, setServerModalOpen] = useState(false)
   const [serverUrlInput, setServerUrlInput] = useState(apiBaseUrl)
+  const [shareCopied, setShareCopied] = useState(false)
 
   const [isLoading, setIsLoading] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -158,6 +172,20 @@ function App() {
     localStorage.removeItem('geosentiment-api-base-url')
     setServerModalOpen(false)
     setErrorMsg('')
+  }
+
+  const copyShareLink = async () => {
+    const targetUrl = apiBaseUrl || serverUrlInput.trim().replace(/\/+$/, '')
+    const url = targetUrl
+      ? `${window.location.origin}/?api=${encodeURIComponent(targetUrl)}`
+      : window.location.origin
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch {
+      // fallback
+    }
   }
 
   useEffect(() => {
@@ -662,6 +690,24 @@ function App() {
                     Kosongkan jika menjalankan frontend di <code>localhost:5173</code> (proxy otomatis).
                   </p>
                 </div>
+
+                {(apiBaseUrl || serverUrlInput.trim()) && (
+                  <div className="p-3 bg-[#e8f0fe] dark:bg-[#1a3860]/40 rounded-2xl border border-[#aecbfa] dark:border-[#174ea6] flex items-center justify-between gap-3 mt-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#174ea6] dark:text-[#8ab4f8]">Link Siap Pakai untuk Teman</p>
+                      <p className="text-[11px] text-[#1a73e8] dark:text-[#aecbfa] truncate">
+                        Teman langsung terhubung tanpa perlu setting manual
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={copyShareLink}
+                      className="px-3.5 py-1.5 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                    >
+                      {shareCopied ? 'Tersalin!' : 'Salin Link'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#f1f3f4] dark:border-[#3c4043]">
