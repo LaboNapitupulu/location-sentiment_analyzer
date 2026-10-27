@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { FormEvent } from 'react'
-import { Clock3, ShieldAlert, Sun, Moon, Server, X } from 'lucide-react'
+import { Clock3, ShieldAlert, Sun, Moon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { DynamicBackground } from './components/DynamicBackground'
@@ -122,10 +122,7 @@ function App() {
     if (saved) return saved === 'dark'
     return window.matchMedia('(prefers-color-scheme: dark)').matches
   })
-  const [apiBaseUrl, setApiBaseUrl] = useState<string>(getInitialApiBaseUrl)
-  const [serverModalOpen, setServerModalOpen] = useState(false)
-  const [serverUrlInput, setServerUrlInput] = useState(apiBaseUrl)
-  const [shareCopied, setShareCopied] = useState(false)
+  const [apiBaseUrl] = useState<string>(getInitialApiBaseUrl)
 
   const [isLoading, setIsLoading] = useState(false)
   const [statusText, setStatusText] = useState('')
@@ -146,10 +143,6 @@ function App() {
   const placesSessionTokenRef = useRef(crypto.randomUUID())
   const isFinishedRef = useRef(false)
 
-  const isRemoteHost = typeof window !== 'undefined' && 
-    window.location.hostname !== 'localhost' && 
-    window.location.hostname !== '127.0.0.1'
-
   const apiUrl = useCallback((path: string) => `${apiBaseUrl}${path}`, [apiBaseUrl])
   const apiHeaders = useMemo(() => apiBaseUrl.includes('.ngrok')
     ? { 'ngrok-skip-browser-warning': 'true' }
@@ -157,36 +150,6 @@ function App() {
 
   const buildAnalyzeUrl = (queryInput: string) =>
     apiUrl(`/api/analyze?url=${encodeURIComponent(queryInput)}`)
-
-  const handleSaveServerUrl = () => {
-    const cleaned = serverUrlInput.trim().replace(/\/+$/, '')
-    setApiBaseUrl(cleaned)
-    localStorage.setItem('geosentiment-api-base-url', cleaned)
-    setServerModalOpen(false)
-    setErrorMsg('')
-  }
-
-  const handleResetServerUrl = () => {
-    setApiBaseUrl('')
-    setServerUrlInput('')
-    localStorage.removeItem('geosentiment-api-base-url')
-    setServerModalOpen(false)
-    setErrorMsg('')
-  }
-
-  const copyShareLink = async () => {
-    const targetUrl = apiBaseUrl || serverUrlInput.trim().replace(/\/+$/, '')
-    const url = targetUrl
-      ? `${window.location.origin}/?api=${encodeURIComponent(targetUrl)}`
-      : window.location.origin
-    try {
-      await navigator.clipboard.writeText(url)
-      setShareCopied(true)
-      setTimeout(() => setShareCopied(false), 2000)
-    } catch {
-      // fallback
-    }
-  }
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
@@ -382,7 +345,7 @@ function App() {
       }
     }).catch((error) => {
       if (error.name !== 'AbortError' && !isFinishedRef.current) {
-        setErrorMsg('Backend connection failed. Make sure the backend is running on port 8001.')
+        setErrorMsg('Gagal terhubung ke server pemrosesan ulasan. Layanan mungkin sedang offline atau dalam pemeliharaan. Silakan coba beberapa saat lagi.')
         setIsLoading(false)
       }
       closeStream()
@@ -408,23 +371,8 @@ function App() {
       {/* Google Ambient Halo Background */}
       <DynamicBackground />
 
-      {/* Top Navigation Bar: Server Settings & Theme Toggle */}
+      {/* Top Navigation Bar: Theme Toggle */}
       <div className="absolute top-5 right-6 flex items-center gap-2.5 z-50">
-        <button
-          type="button"
-          onClick={() => {
-            setServerUrlInput(apiBaseUrl)
-            setServerModalOpen(true)
-          }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#303134] border border-[#dadce0] dark:border-[#5f6368] shadow-sm hover:shadow-md transition-all text-xs font-semibold text-[#3c4043] dark:text-[#bdc1c6]"
-          title="Configure backend server URL"
-        >
-          <Server className="w-3.5 h-3.5 text-[#4285F4]" />
-          <span className="hidden sm:inline">
-            {apiBaseUrl ? 'Tunnel API' : 'Backend: Localhost'}
-          </span>
-        </button>
-
         <button
           type="button"
           onClick={() => setIsDark((value) => !value)}
@@ -548,62 +496,25 @@ function App() {
             </motion.div>
           )}
 
-          {/* Error Banner with Guided Resolution */}
+          {/* Error Banner */}
           {errorMsg && !isLoading && (
             <motion.div 
               key="error"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-6 p-5 bg-[#fce8e6] dark:bg-[#3c1c1b] border border-[#fad2cf] dark:border-[#5c2b29] rounded-2xl text-[#c5221f] dark:text-[#f28b82] w-full max-w-xl shadow-lg text-left" 
+              className="mt-6 p-4 sm:p-5 bg-[#fce8e6] dark:bg-[#3c1c1b] border border-[#fad2cf] dark:border-[#5c2b29] rounded-2xl text-[#c5221f] dark:text-[#f28b82] w-full max-w-xl shadow-md text-left" 
               role="alert"
             >
               <div className="flex items-start gap-3">
                 <ShieldAlert className="w-5 h-5 text-[#c5221f] dark:text-[#f28b82] shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm text-[#202124] dark:text-[#fce8e6]">
-                    Backend Connection Failed
+                    Gagal Terhubung ke Layanan
                   </p>
-                  
-                  {isRemoteHost ? (
-                    <div className="mt-2 text-xs text-[#3c4043] dark:text-[#e8eaed] space-y-2.5 leading-relaxed">
-                      <p>
-                        Anda sedang membuka web di <strong>{window.location.hostname}</strong> (Vercel). Karena backend scraper Playwright & AI IndoBERT berjalan di komputer lokal Anda, browser memblokir koneksi HTTP langsung karena batasan keamanan HTTPS (Mixed Content).
-                      </p>
-                      
-                      <div className="p-3 rounded-xl bg-white dark:bg-[#202124] border border-[#fad2cf] dark:border-[#5c2b29] space-y-1.5">
-                        <p className="font-bold text-[#1a73e8] dark:text-[#8ab4f8]">👉 Solusi Paling Mudah (Jalankan Lokal):</p>
-                        <p>
-                          Jalankan frontend lokal dan buka di browser: <br />
-                          <a href="http://localhost:5173" className="font-mono font-bold underline text-[#1a73e8] dark:text-[#8ab4f8]" target="_blank" rel="noreferrer">
-                            http://localhost:5173
-                          </a>
-                        </p>
-                        <p className="text-[11px] text-[#5f6368] dark:text-[#9aa0a6]">
-                          (Pastikan <code>npm run dev</code> dan <code>.\.venv\Scripts\python.exe main.py</code> sudah aktif)
-                        </p>
-                      </div>
-
-                      <div className="pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setServerUrlInput(apiBaseUrl)
-                            setServerModalOpen(true)
-                          }}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1a73e8] text-white text-xs font-semibold hover:bg-[#1557b0] transition-colors"
-                        >
-                          <Server className="w-3.5 h-3.5" />
-                          Hubungkan via URL Ngrok HTTPS
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-[#3c4043] dark:text-[#e8eaed] mt-1 leading-relaxed">
-                      Pastikan backend Python sedang aktif di port 8001: <br />
-                      <code className="px-1.5 py-0.5 rounded bg-white dark:bg-[#202124] font-mono text-[11px]">cd backend && .\.venv\Scripts\python.exe main.py</code>
-                    </p>
-                  )}
+                  <p className="text-xs text-[#3c4043] dark:text-[#e8eaed] mt-1 leading-relaxed">
+                    {errorMsg}
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -645,91 +556,6 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Backend Server Settings Modal */}
-      <AnimatePresence>
-        {serverModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-[#303134] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-[#dadce0] dark:border-[#5f6368] text-left"
-            >
-              <div className="flex items-center justify-between pb-4 border-b border-[#f1f3f4] dark:border-[#3c4043]">
-                <div className="flex items-center gap-2">
-                  <Server className="w-5 h-5 text-[#4285F4]" />
-                  <h3 className="text-lg font-bold text-[#202124] dark:text-[#e8eaed]">Pengaturan Server Backend</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setServerModalOpen(false)}
-                  className="p-1.5 rounded-full text-[#5f6368] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043]"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="py-4 space-y-3">
-                <p className="text-xs text-[#5f6368] dark:text-[#9aa0a6] leading-relaxed">
-                  Jika Anda menggunakan Vercel, jalankan <code>ngrok http 8001</code> di komputer Anda lalu tempelkan URL HTTPS yang dihasilkan di bawah:
-                </p>
-
-                <div>
-                  <label htmlFor="backend-url" className="block text-xs font-bold text-[#3c4043] dark:text-[#bdc1c6] mb-1">
-                    URL API Backend (HTTPS)
-                  </label>
-                  <input
-                    id="backend-url"
-                    type="url"
-                    placeholder="https://contoh-ngrok.ngrok-free.app"
-                    value={serverUrlInput}
-                    onChange={(e) => setServerUrlInput(e.target.value)}
-                    className="w-full bg-[#f8f9fa] dark:bg-[#202124] border border-[#dadce0] dark:border-[#5f6368] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#202124] dark:text-[#e8eaed] outline-none focus:border-[#4285F4]"
-                  />
-                  <p className="text-[11px] text-[#80868b] mt-1">
-                    Kosongkan jika menjalankan frontend di <code>localhost:5173</code> (proxy otomatis).
-                  </p>
-                </div>
-
-                {(apiBaseUrl || serverUrlInput.trim()) && (
-                  <div className="p-3 bg-[#e8f0fe] dark:bg-[#1a3860]/40 rounded-2xl border border-[#aecbfa] dark:border-[#174ea6] flex items-center justify-between gap-3 mt-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#174ea6] dark:text-[#8ab4f8]">Link Siap Pakai untuk Teman</p>
-                      <p className="text-[11px] text-[#1a73e8] dark:text-[#aecbfa] truncate">
-                        Teman langsung terhubung tanpa perlu setting manual
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={copyShareLink}
-                      className="px-3.5 py-1.5 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-semibold shrink-0 transition-colors shadow-sm"
-                    >
-                      {shareCopied ? 'Tersalin!' : 'Salin Link'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#f1f3f4] dark:border-[#3c4043]">
-                <button
-                  type="button"
-                  onClick={handleResetServerUrl}
-                  className="px-4 py-2 rounded-full text-xs font-semibold text-[#5f6368] dark:text-[#9aa0a6] hover:bg-[#f1f3f4] dark:hover:bg-[#3c4043] transition-colors"
-                >
-                  Reset Default
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveServerUrl}
-                  className="px-5 py-2 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white text-xs font-semibold shadow-sm transition-colors"
-                >
-                  Simpan URL
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </main>
   )
 }
